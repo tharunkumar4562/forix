@@ -1,20 +1,24 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# ⚽ FORIX — FIFA World Cup 2026 AI Match Intelligence
 
-# Run and deploy your AI Studio app
+FORIX is a premium, data-driven sports analytics platform designed to track, simulate, and analyze the FIFA World Cup 2026 tournament structure. Moving past typical generic beginner data-science projects, FORIX integrates live RESTful sports data arrays, localized historical machine learning vector lookups, and generative large language models into a high-performance, frictionless editorial dashboard.
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/8d0b952d-195d-42b1-985b-9073bc3f5a84
+## 🚀 Architectural Workflow
 
-## Run Locally
+The platform operates on an decoupled multi-stage data orchestration model to completely mitigate manual input friction:
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```text
+[ API-Sports / worldcup26.ir ] ──> Raw Match Metrics & Real-time Feeds
+                                            │
+                                            ▼
+[ Local database.csv ] ───────────> Historical ELO & Form Vectors
+                                            │
+                                            ▼
+[ Random Forest Engine ] ─────────> Core Win / Draw / Loss Probabilities
+                                            │
+                                            ▼
+[ Google Gemini 1.5 ] ────────────> Automated Tactical Previews & Columns
+                                            │
+                                            ▼
+[ Streamlit Editorial UI ] ───────> Frictionless Global Fan Dashboard
