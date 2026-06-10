@@ -6,8 +6,12 @@ class FootballAPI:
     FALLBACK_URL = "https://worldcup26.ir/get"
     
     def __init__(self):
-        # Read from core root as configured in secrets.toml
-        self.headers = {"x-apisports-key": "225596abac573ac37b671fa6ebc9aa38"}
+        # Read API key from Streamlit secrets (never hardcode)
+        try:
+            api_key = st.secrets["FOOTBALL_API_KEY"]
+        except Exception:
+            api_key = ""
+        self.headers = {"x-apisports-key": api_key}
 
     @st.cache_data(ttl=300)
     def get_live_fixtures(_self):

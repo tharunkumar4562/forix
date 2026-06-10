@@ -579,7 +579,7 @@ tab1, tab2, tab3 = st.tabs(["🔴 Live Now", "⏳ Upcoming", "✅ Completed"])
 # Live fixtures Tab
 with tab1:
     api_fixtures = fetch_fixtures_from_api("live", football_key)
-    if api_fixtures is None:
+    if not api_fixtures or not isinstance(api_fixtures, list):
         # Beautiful fallback matching design instructions
         st.markdown("""
         <div class="amber-banner">
@@ -604,7 +604,7 @@ with tab1:
 # Upcoming fixtures Tab
 with tab2:
     api_fixtures = fetch_fixtures_from_api("upcoming", football_key)
-    if api_fixtures is None or len(api_fixtures) == 0:
+    if not api_fixtures or not isinstance(api_fixtures, list):
         st.markdown("""
         <div class="amber-banner">
             ⚠️ Using cached data — live API unavailable
@@ -631,7 +631,7 @@ with tab2:
 # Completed fixtures Tab
 with tab3:
     api_fixtures = fetch_fixtures_from_api("completed", football_key)
-    if api_fixtures is None or len(api_fixtures) == 0:
+    if not api_fixtures or not isinstance(api_fixtures, list):
         st.markdown("""
         <div class="amber-banner">
             ⚠️ Using cached data — live API unavailable
