@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  
+  --color-accent: #2E5BFF;
+  --color-subtle: #64748B;
+  --color-border-sleek: #E2E8F0;
+  --color-brand-dark: #1A1A2E;
+  --color-bg-sleek: #F8F9FA;
+  
+  --shadow-sleek: 0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01);
+  --shadow-header: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+body {
+  background-color: var(--color-bg-sleek);
+  color: var(--color-brand-dark);
+  font-family: var(--font-sans);
+}
+
+.text-display {
+  font-family: var(--font-display);
+}
+
+/* Custom Sleek theme utilities */
+.bg-hero-gradient {
+  background: linear-gradient(135deg, #1A1A2E 0%, #2E5BFF 100%);
+}
+
+.sleek-card {
+  background: #FFFFFF;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-sleek);
+  box-shadow: var(--shadow-sleek);
+}
+
+.nav-item-sleek {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-subtle);
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+}
+
+.nav-item-sleek.active {
+  color: var(--color-accent);
+  background-color: #EFF3FF;
+}
+
+.badge-w {
+  background-color: #DCFCE7;
+  color: #166534;
+}
+
+.badge-d {
+  background-color: #FEF9C3;
+  color: #854D0E;
+}
+
+.badge-l {
+  background-color: #FEE2E2;
+  color: #991B1B;
+}

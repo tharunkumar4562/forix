@@ -1,0 +1,6 @@
+{
+  "name": "FORIX",
+  "description": "FIFA World Cup 2026 Match Hub, AI Predictions, standings and analysis feed.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

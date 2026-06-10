@@ -1,0 +1,49 @@
+team_name,group,elo_rating,recent_form,avg_goals_scored,avg_goals_conceded,key_player,key_player_stat,flag_emoji,confederation
+Argentina,B,2080,"W,W,D,L,W",2.10,0.65,Lionel Messi,11 goals in qualifiers,🇦🇷,CONMEBOL
+France,B,2040,"W,D,W,W,D",2.30,0.80,Kylian Mbappé,9 goals in Euro qualifiers,🇫🇷,UEFA
+Spain,D,2010,"W,W,W,W,D",2.40,0.70,Lamine Yamal,7 assists in qualifiers,🇪🇸,UEFA
+England,C,2020,"L,W,W,D,W",2.15,0.75,Harry Kane,8 goals in Euro qualifiers,🇬🇧,UEFA
+Brazil,C,1980,"W,D,L,L,W",1.85,0.95,Vinícius Júnior,5 goals in qualifiers,🇧🇷,CONMEBOL
+Belgium,E,1910,"W,D,L,W,D",1.90,0.85,Kevin De Bruyne,8 assists in qualifiers,🇧🇪,UEFA
+Portugal,E,1950,"W,W,W,L,W",2.60,0.60,Cristiano Ronaldo,10 goals in qualifiers,🇵🇹,UEFA
+Netherlands,D,1940,"W,L,W,W,D",2.20,0.90,Virgil van Dijk,4 clean sheets,🇳🇱,UEFA
+Germany,F,1930,"W,W,D,W,L",2.10,1.10,Florian Wirtz,6 goals in friendly build-ups,🇩🇪,UEFA
+Italy,F,1920,"W,D,W,L,W",1.70,0.85,Federico Chiesa,4 assists in qualifiers,🇮🇹,UEFA
+Uruguay,F,1950,"W,W,W,L,W",2.05,0.80,Federico Valverde,5 goals in CONMEBOL,🇺🇾,CONMEBOL
+Croatia,G,1890,"W,D,W,L,W",1.65,0.90,Luka Modrić,4 assists in qualifiers,🇭🇷,UEFA
+USA,A,1820,"L,W,D,W,L",1.75,1.10,Christian Pulisic,6 goals in qualifiers,🇺🇸,CONCACAF
+Mexico,A,1800,"W,L,W,L,W",1.60,1.15,Santiago Giménez,5 goals in qualifiers,🇲🇽,CONCACAF
+Colombia,E,1940,"W,W,W,D,W",1.95,0.75,Luis Díaz,6 goals in CONMEBOL qualifiers,🇨🇴,CONMEBOL
+Morocco,B,1910,"D,W,W,D,W",1.80,0.50,Achraf Hakimi,5 assists in qualifiers,🇲🇦,CAF
+Senegal,C,1780,"W,W,D,W,D",1.70,0.70,Sadio Mané,6 goals in CAF qualifiers,🇸🇳,CAF
+Japan,B,1880,"W,W,W,W,W",2.50,0.60,Kaoru Mitoma,5 assists in AFC qualifiers,🇯🇵,AFC
+South Korea,C,1795,"W,W,D,W,D",2.10,0.85,Heung-min Son,7 goals in AFC qualifiers,🇰🇷,AFC
+Iran,D,1790,"W,W,D,W,W",2.20,0.95,Mehdi Taremi,6 goals in WC Qualifiers,🇮🇷,AFC
+Australia,E,1750,"W,W,L,W,D",1.95,0.70,Harry Souttar,4 goals in AFC qualifiers,🇦🇺,AFC
+Denmark,G,1850,"W,D,W,L,W",1.80,0.90,Rasmus Højlund,7 goals in qualifiers,🇩🇰,UEFA
+Austria,H,1810,"W,W,L,W,D",1.90,1.00,Marcel Sabitzer,5 goals in qualifiers,🇦🇹,UEFA
+Switzerland,H,1820,"D,W,D,W,L",1.60,0.85,Granit Xhaka,82% pass completion in qualifiers,🇨🇭,UEFA
+Ukraine,I,1770,"W,W,D,L,W",1.65,1.05,Mykhailo Mudryk,4 assists in qualifiers,🇺🇦,UEFA
+Turkey,J,1760,"L,W,W,D,L",1.70,1.20,Arda Güler,3 qualifier goals,🇹🇷,UEFA
+Sweden,J,1765,"W,L,W,W,D",1.95,1.10,Viktor Gyökeres,8 goals in qualifiers,🇸🇪,UEFA
+Poland,I,1740,"W,D,L,W,D",1.50,1.15,Robert Lewandowski,5 goals in qualifiers,🇵🇱,UEFA
+Wales,K,1720,"D,W,D,W,L",1.45,1.00,Brennan Johnson,4 assists in qualifiers,🏴󠁧󠁢󠁳󠁣󠁴󠁿,UEFA
+Scotland,K,1715,"L,D,W,L,D",1.40,1.30,Scott McTominay,7 goals in qualifiers,🏴󠁧󠁢󠁳󠁣󠁴󠁿,UEFA
+Hungary,L,1750,"W,W,L,W,D",1.80,1.00,Dominik Szoboszlai,5 goals in qualifiers,🇭🇺,UEFA
+Czechia,L,1745,"W,D,W,L,D",1.60,1.05,Patrik Schick,4 goals in Euro qualifiers,🇨🇿,UEFA
+Serbia,K,1755,"W,L,D,W,L",1.70,1.25,Aleksandar Mitrović,6 goals in qualifiers,🇷🇸,UEFA
+Ecuador,G,1830,"W,D,W,L,W",1.55,0.85,Moises Caicedo,89% pass completion,🇪🇨,CONMEBOL
+Peru,I,1710,"L,L,D,W,L",1.10,1.30,Gianluca Lapadula,3 goals in qualifiers,🇵🇪,CONMEBOL
+Chile,H,1730,"W,L,L,D,W",1.25,1.20,Alexis Sánchez,3 assists in qualifiers,🇨🇱,CONMEBOL
+Venezuela,J,1690,"D,W,L,D,D",1.15,1.05,Salomón Rondón,4 goals in qualifiers,🇻🇪,CONMEBOL
+Egypt,D,1760,"W,D,W,W,L",2.00,0.95,Mohamed Salah,8 goals in CAF qualifiers,🇪🇬,CAF
+Nigeria,I,1770,"D,L,W,W,D",1.85,1.10,Victor Osimhen,7 goals in qualifiers,🇳🇬,CAF
+Tunisia,F,1680,"W,D,L,W,D",1.20,0.90,Ellyes Skhiri,3 key assists,🇹🇳,CAF
+Algeria,H,1730,"W,W,L,D,W",1.90,1.05,Riyad Mahrez,5 assists in qualifiers,🇩🇿,CAF
+Cameroon,J,1680,"D,W,L,W,L",1.40,1.15,Vincent Aboubakar,4 goals in qualifiers,🇨🇲,CAF
+Mali,L,1670,"W,D,W,L,W",1.50,0.95,Yves Bissouma,87% tackle success,🇲🇱,CAF
+Canada,A,1750,"W,D,L,W,D",1.70,1.10,Jonathan David,5 goals in qualifiers,🇨🇦,CONCACAF
+Costa Rica,K,1660,"W,D,L,L,W",1.30,1.25,Joel Campbell,3 goals in qualifiers,🇨🇷,CONCACAF
+Saudi Arabia,G,1650,"L,W,D,L,W",1.35,1.15,Salem Al-Dawsari,4 goals in qualifiers,🇸🇦,AFC
+Qatar,L,1640,"W,W,L,W,D",1.80,1.30,Akram Afif,8 assists in Asian Cup,🇶🇦,AFC
+New Zealand,A,1550,"W,W,D,L,W",1.50,1.40,Chris Wood,6 goals in OFC qualifiers,🇳🇿,OFC
