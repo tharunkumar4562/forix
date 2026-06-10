@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import datetime
 from utils.api_football import FootballAPI
 from utils.gemini_helper import GeminiAI
 
@@ -937,7 +938,7 @@ else:
                   <rect x="150" y="560" width="100" height="30" fill="none" stroke="#ffffff" stroke-width="2"/>
                   <circle cx="200" cy="505" r="2" fill="#ffffff"/>
                   
-                  {/* --- AWAY TEAM NODES (Top Half - Black circles) --- */}
+                  {{/* --- AWAY TEAM NODES (Top Half - Black circles) --- */}}
                   <!-- Keeper -->
                   <circle cx="200" cy="45" r="10" fill="#1A1A2E" stroke="#ffffff" stroke-width="1.5"/>
                   <text x="200" y="65" font-family="'Inter', sans-serif" font-weight="800" font-size="10px" fill="#ffffff" text-anchor="middle">{away_squad[0] if len(away_squad)>0 else "Gk"}</text>
@@ -968,7 +969,7 @@ else:
                   <circle cx="320" cy="250" r="10" fill="#1A1A2E" stroke="#ffffff" stroke-width="1.5"/>
                   <text x="320" y="270" font-family="'Inter', sans-serif" font-weight="700" font-size="9px" fill="#ffffff" text-anchor="middle">{away_squad[10] if len(away_squad)>10 else "Att"}</text>
 
-                  {/* --- HOME TEAM NODES (Bottom Half - Green circles) --- */}
+                  {{/* --- HOME TEAM NODES (Bottom Half - Green circles) --- */}}
                   <!-- Forwards -->
                   <circle cx="80" cy="350" r="10" fill="#006B3C" stroke="#ffffff" stroke-width="1.5"/>
                   <text x="80" y="370" font-family="'Inter', sans-serif" font-weight="700" font-size="9px" fill="#ffffff" text-anchor="middle">{home_squad[8] if len(home_squad)>8 else "Att"}</text>

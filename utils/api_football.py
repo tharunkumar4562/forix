@@ -23,8 +23,9 @@ class FootballAPI:
             # Continuous Fallback to Open Source Public API if Direct fails
             fallback = requests.get(f"{_self.FALLBACK_URL}/games", timeout=10)
             if fallback.status_code == 200:
-                # Map or return native public stream match array
-                return fallback.json()
+                data = fallback.json()
+                # Ensure we always return a list, not a dict
+                return data if isinstance(data, list) else []
         except Exception as e:
             print(f"API Error in get_live_fixtures: {e}")
         return []
