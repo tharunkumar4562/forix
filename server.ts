@@ -8,7 +8,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = parseInt(process.env.PORT || "3000", 10);
+const PORT = 3000;
 
 app.use(express.json());
 
@@ -53,9 +53,15 @@ function loadTeamsDatabase(): Team[] {
   if (cachedTeams.length > 0) return cachedTeams;
 
   try {
-    const csvPath = path.resolve(process.cwd(), "database.csv");
+    let csvPath = path.resolve(process.cwd(), "database.csv");
     if (!fs.existsSync(csvPath)) {
-      console.warn("database.csv not found at root! Returning empty list.");
+      csvPath = path.resolve(__dirname, "database.csv");
+    }
+    if (!fs.existsSync(csvPath)) {
+      csvPath = path.resolve(__dirname, "../database.csv");
+    }
+    if (!fs.existsSync(csvPath)) {
+      console.warn("database.csv not found! Returning empty list.");
       return [];
     }
 
@@ -372,4 +378,8 @@ async function startServer() {
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
