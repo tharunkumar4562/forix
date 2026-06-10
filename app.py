@@ -448,57 +448,27 @@ def render_match_card(fixture, status_type="upcoming", is_fallback=False):
     away_flag = tB_data['flag_emoji']
     away_form_emojis = form_to_emojis(tB_data['recent_form'])
 
-    # VS details based on match type
+    # VS details based on match type — kept on single lines to avoid
+    # Markdown treating indented lines (4+ spaces) as code blocks
     if status_type == "live":
-        vs_block_html = f"""
-        <div style="text-align: center;">
-            <div class="live-minute">⏱ {elapsed}'</div>
-            <div class="live-score">{home_goals} - {away_goals}</div>
-            <div style="display: flex; align-items: center; justify-content: center; margin-top: 6px;">
-                <span class="live-dot"></span>
-                <span style="font-size: 11px; font-weight: 800; color: #E53935; text-transform: uppercase; letter-spacing: 0.5px;">Live Now</span>
-            </div>
-        </div>
-        """
+        vs_block_html = f'<div style="text-align:center;"><div class="live-minute">⏱ {elapsed}\'</div><div class="live-score">{home_goals} - {away_goals}</div><div style="display:flex;align-items:center;justify-content:center;margin-top:6px;"><span class="live-dot"></span><span style="font-size:11px;font-weight:800;color:#E53935;text-transform:uppercase;letter-spacing:0.5px;">Live Now</span></div></div>'
     elif status_type == "completed":
-        vs_block_html = f"""
-        <div style="text-align: center;">
-            <div style="font-size: 26px; font-weight: 900; color: var(--text-primary); letter-spacing: 1px;">{home_goals} - {away_goals}</div>
-            <div style="font-size: 10px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-top: 2px;">Full Time</div>
-        </div>
-        """
+        vs_block_html = f'<div style="text-align:center;"><div style="font-size:26px;font-weight:900;color:var(--text-primary);letter-spacing:1px;">{home_goals} - {away_goals}</div><div style="font-size:10px;font-weight:800;color:var(--text-secondary);text-transform:uppercase;margin-top:2px;">Full Time</div></div>'
     else:
-        vs_block_html = f"""
-        <div class="vs-text">vs</div>
-        """
+        vs_block_html = '<div class="vs-text">vs</div>'
 
-    # Print HTML main layout
-    card_html = f"""
-    <div class="match-card">
-        <div class="match-card-header">
-            <span>🌍 Group {group_name} · FIFA World Cup 2026</span>
-            <span>{match_date} · {match_time}</span>
-        </div>
-        <div class="match-card-content">
-            <div class="team-side">
-                <span class="flag">{home_flag}</span>
-                <span class="team-name">{home_team}</span>
-                <span class="metric">Elo Rating: <strong>{home_elo}</strong></span>
-                <span class="form-row">Form: {home_form_emojis}</span>
-            </div>
-            {vs_block_html}
-            <div class="team-side align-right">
-                <span class="flag">{away_flag}</span>
-                <span class="team-name">{away_team}</span>
-                <span class="metric">Elo Rating: <strong>{away_elo}</strong></span>
-                <span class="form-row">Form: {away_form_emojis}</span>
-            </div>
-        </div>
-        <div class="match-card-venue">
-            📍 Stadium Venue: <strong>{venue}</strong>
-        </div>
-    </div>
-    """
+    # Print HTML main layout — all on compact lines to prevent markdown code-block triggering
+    card_html = (
+        f'<div class="match-card">'
+        f'<div class="match-card-header"><span>🌍 Group {group_name} · FIFA World Cup 2026</span><span>{match_date} · {match_time}</span></div>'
+        f'<div class="match-card-content">'
+        f'<div class="team-side"><span class="flag">{home_flag}</span><span class="team-name">{home_team}</span><span class="metric">Elo Rating: <strong>{home_elo}</strong></span><span class="form-row">Form: {home_form_emojis}</span></div>'
+        f'{vs_block_html}'
+        f'<div class="team-side align-right"><span class="flag">{away_flag}</span><span class="team-name">{away_team}</span><span class="metric">Elo Rating: <strong>{away_elo}</strong></span><span class="form-row">Form: {away_form_emojis}</span></div>'
+        f'</div>'
+        f'<div class="match-card-venue">📍 Stadium Venue: <strong>{venue}</strong></div>'
+        f'</div>'
+    )
     st.markdown(card_html, unsafe_allow_html=True)
     
     # Interactive Streamlit routing action attached securely beneath card container
