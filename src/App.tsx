@@ -22,6 +22,7 @@ import {
   MapPin,
   Calendar
 } from "lucide-react";
+import { Analytics } from "@vercel/analytics/react";
 import { Team, PredictionResult, NewsArticle, MatchFixture } from "./types";
 import { WORLD_CUP_FIXTURES } from "./fixtures";
 
@@ -1198,6 +1199,7 @@ export default function App() {
           </div>
         </div>
       </footer>
+      <Analytics />
     </div>
   );
 }
