@@ -835,6 +835,7 @@ export default function App() {
                     
                     {/* Header outcome title */}
                     <div className="bg-hero-gradient text-white rounded-xl py-6 px-4 text-center relative overflow-hidden mb-4 shadow-md" id="prediction-hero-match">
+                      <h2 className="sr-only">{teamASelected} vs {teamBSelected} AI Match Prediction</h2>
                       <div className="absolute top-2 right-3 text-[10px] font-bold tracking-wider bg-black/30 px-2.5 py-0.5 rounded-full uppercase text-white/90">
                         AI Prediction Outcome
                       </div>
