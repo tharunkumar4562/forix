@@ -127,6 +127,19 @@ export default function App() {
     if (metaDesc) {
       metaDesc.setAttribute("content", descMap[activeTab]);
     }
+
+    // Also update dynamic Open Graph and Twitter tags for social SEO
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute("content", titleMap[activeTab]);
+
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute("content", descMap[activeTab]);
+
+    const twTitle = document.querySelector('meta[property="twitter:title"]');
+    if (twTitle) twTitle.setAttribute("content", titleMap[activeTab]);
+
+    const twDesc = document.querySelector('meta[property="twitter:description"]');
+    if (twDesc) twDesc.setAttribute("content", descMap[activeTab]);
   }, [activeTab]);
 
   const fetchTeams = async () => {
@@ -391,14 +404,17 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-auto md:h-16 py-3 md:py-0 flex flex-col md:flex-row items-center justify-between gap-4">
           
           {/* Logo */}
-          <h1 className="logo flex items-center text-2xl font-extrabold tracking-tight text-accent" id="logo-icon">
+          <div className="logo flex items-center text-2xl font-extrabold tracking-tight text-accent" id="logo-icon">
             ⚽ FORIX<span className="font-light text-sm text-subtle ml-2 tracking-wide uppercase">WC 2026 ANALYTICS</span>
-          </h1>
+          </div>
 
           {/* NAVIGATION TAB CONTROLS */}
-          <nav className="flex items-center gap-6" id="main-navigation">
+          <nav className="flex items-center gap-6" id="main-navigation" role="tablist" aria-label="Main Navigation Tabs">
             <button
               onClick={() => setActiveTab("hub")}
+              role="tab"
+              aria-selected={activeTab === "hub"}
+              aria-controls="screen-match-hub"
               className={`nav-item-sleek px-3 py-2 cursor-pointer ${
                 activeTab === "hub" ? "active" : ""
               }`}
@@ -408,6 +424,9 @@ export default function App() {
             </button>
             <button
               onClick={() => setActiveTab("center")}
+              role="tab"
+              aria-selected={activeTab === "center"}
+              aria-controls="screen-match-center"
               className={`nav-item-sleek px-3 py-2 cursor-pointer ${
                 activeTab === "center" ? "active" : ""
               }`}
@@ -417,6 +436,9 @@ export default function App() {
             </button>
             <button
               onClick={() => setActiveTab("stands")}
+              role="tab"
+              aria-selected={activeTab === "stands"}
+              aria-controls="screen-group-standings"
               className={`nav-item-sleek px-3 py-2 cursor-pointer ${
                 activeTab === "stands" ? "active" : ""
               }`}
@@ -426,6 +448,9 @@ export default function App() {
             </button>
             <button
               onClick={() => setActiveTab("insights")}
+              role="tab"
+              aria-selected={activeTab === "insights"}
+              aria-controls="screen-insights"
               className={`nav-item-sleek px-3 py-2 cursor-pointer ${
                 activeTab === "insights" ? "active" : ""
               }`}
@@ -488,9 +513,9 @@ export default function App() {
             {/* HERO INTRODUCTION */}
             <div className="bg-hero-gradient text-white rounded-xl p-6 shadow-md flex flex-col md:flex-row items-center justify-between gap-6" id="hero-marketing">
               <div className="space-y-2 max-w-2xl">
-                <h2 className="text-2xl font-extrabold tracking-tight text-display text-white" id="hero-title">
+                <h1 className="text-2xl font-extrabold tracking-tight text-display text-white" id="hero-title">
                   FIFA 2026 World Cup Analytical Console
-                </h2>
+                </h1>
                 <p className="text-sm text-white/85 leading-relaxed font-normal" id="hero-p text">
                   Welcome to FORIX, the premier analytics dashboard for the upcoming 48-team 2026 World Cup. Explore Elo rankings, key player metric parameters, recent team form, and unleash customized predictive models in the Match Center to create deep tactical match forecasts.
                 </p>
@@ -851,10 +876,10 @@ export default function App() {
             
             {/* INSTRUCTOR CARD */}
             <div className="sleek-card p-6" id="center-intro">
-              <h2 className="text-xl font-bold tracking-tight text-display text-brand-dark flex items-center gap-2" id="prediction-title">
+              <h1 className="text-xl font-bold tracking-tight text-display text-brand-dark flex items-center gap-2" id="prediction-title">
                 <Sparkles className="w-5 h-5 text-amber-500" />
                 FORIX AI Predictive Analyst
-              </h2>
+              </h1>
               <p className="text-sm text-subtle mt-1 leading-relaxed" id="predictor-instruction">
                 Choose any two qualified nations. The neural network compares their relative ELO ratings, offensive output index, historical defensive concessions, and confederation distribution to formulate a full tactical match simulation.
               </p>
@@ -1150,10 +1175,10 @@ export default function App() {
 
             <div className="sleek-card p-6 flex flex-col md:flex-row items-center justify-between gap-4" id="standings-intro">
               <div>
-                <h2 className="text-xl font-bold tracking-tight text-display text-brand-dark flex items-center gap-2">
+                <h1 className="text-xl font-bold tracking-tight text-display text-brand-dark flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-yellow-600" />
                   FIFA 2026 World Cup — Live Group Standings
-                </h2>
+                </h1>
                 <p className="text-sm text-subtle mt-1 leading-relaxed">
                   Real-time standings from the official tournament. Updated automatically every 60 seconds.
                 </p>
@@ -1350,10 +1375,10 @@ export default function App() {
           <div className="space-y-6" id="screen-insights">
             
             <div className="sleek-card p-6" id="insights-introduction">
-              <h2 className="text-xl font-bold tracking-tight text-display text-brand-dark flex items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight text-display text-brand-dark flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-accent" />
                 World Cup Analytical Analysis Hub
-              </h2>
+              </h1>
               <p className="text-sm text-subtle mt-1 leading-relaxed">
                 Unlock daily analytics digests, tactical projections, and group reviews fabricated live through localized FORIX AI analytical models. Keep up to date with deep technical breakdowns of qualified heavyweight contenders.
               </p>
@@ -1368,7 +1393,7 @@ export default function App() {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" id="news-grid-container">
                 {news.map(article => (
-                  <div 
+                  <article 
                     key={article.id}
                     className="sleek-card p-5 flex flex-col justify-between hover:border-accent hover:shadow-sleek transition-all space-y-4 bg-white"
                     id={`news-card-${article.id}`}
@@ -1416,7 +1441,7 @@ export default function App() {
                       ))}
                     </div>
 
-                  </div>
+                  </article>
                 ))}
 
                 {news.length === 0 && (
