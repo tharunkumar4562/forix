@@ -22,8 +22,7 @@ import {
   MapPin,
   Calendar
 } from "lucide-react";
-import { Team, PredictionResult, NewsArticle, MatchFixture } from "./types";
-import { WORLD_CUP_FIXTURES } from "./fixtures";
+import { Team, PredictionResult, NewsArticle, MatchFixture, LiveGame, LiveTeamAPI, LiveGroup, LiveStadium } from "./types";
 
 function getFlagUrl(emoji: string) {
   if (!emoji) return '';
@@ -55,8 +54,16 @@ export default function App() {
   // Data States
   const [teams, setTeams] = useState<Team[]>([]);
   const [news, setNews] = useState<NewsArticle[]>([]);
-  const [fixtures, setFixtures] = useState<MatchFixture[]>(WORLD_CUP_FIXTURES);
-  
+  const [fixtures, setFixtures] = useState<MatchFixture[]>([]);
+
+  // Live API States
+  const [liveGames, setLiveGames] = useState<LiveGame[]>([]);
+  const [liveTeams, setLiveTeams] = useState<LiveTeamAPI[]>([]);
+  const [liveGroups, setLiveGroups] = useState<LiveGroup[]>([]);
+  const [liveStadiums, setLiveStadiums] = useState<LiveStadium[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [loadingLive, setLoadingLive] = useState<boolean>(true);
+
   // Loading & Error States
   const [loadingTeams, setLoadingTeams] = useState<boolean>(true);
   const [loadingNews, setLoadingNews] = useState<boolean>(false);
@@ -77,9 +84,18 @@ export default function App() {
   // Standings state
   const [selectedGroup, setSelectedGroup] = useState<string>("A");
 
-  // Fetch initial database items on mount
+  // Fetch initial data on mount
   useEffect(() => {
     fetchTeams();
+    fetchLiveData();
+  }, []);
+
+  // Auto-refresh live data every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchLiveData();
+    }, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   // Fetch news when insights tab is activated
@@ -122,17 +138,73 @@ export default function App() {
       }
       const data = await response.json();
       setTeams(data);
-      
-      // Seed default dropdowns if database exists
       if (data.length >= 2) {
         setTeamASelected(data[0].team_name);
         setTeamBSelected(data[1].team_name);
       }
     } catch (err: any) {
       console.error(err);
-      setErrorText("Failed to correctly load World Cup 2026 database.csv. Please verify the file exists.");
+      setErrorText("Failed to load team database. Please verify the server is running.");
     } finally {
       setLoadingTeams(false);
+    }
+  };
+
+  const fetchLiveData = async () => {
+    try {
+      setLoadingLive(true);
+      const [gamesRes, groupsRes, teamsRes, stadiumsRes] = await Promise.all([
+        fetch("/api/live/games"),
+        fetch("/api/live/groups"),
+        fetch("/api/live/teams"),
+        fetch("/api/live/stadiums"),
+      ]);
+
+      if (gamesRes.ok) {
+        const gamesData = await gamesRes.json();
+        const games: LiveGame[] = gamesData.games || [];
+        setLiveGames(games);
+        // Convert live games → MatchFixture shape for fixture cards
+        const stadData = stadiumsRes.ok ? (await stadiumsRes.json()).stadiums || [] : [];
+        setLiveStadiums(stadData);
+        const stadMap: Record<string, LiveStadium> = {};
+        stadData.forEach((s: LiveStadium) => { stadMap[s.id] = s; });
+        const mapped: MatchFixture[] = games
+          .filter((g: LiveGame) => g.type === "group")
+          .map((g: LiveGame) => {
+            const stad = stadMap[g.stadium_id];
+            const isFinished = g.finished === "TRUE";
+            const isLive = g.time_elapsed !== "notstarted" && g.time_elapsed !== "finished" && !isFinished;
+            return {
+              id: g.id,
+              group: g.group,
+              teamA: g.home_team_name_en,
+              teamB: g.away_team_name_en,
+              date: g.local_date.split(" ")[0],
+              time: g.local_date.split(" ")[1] || "",
+              stadium: stad ? `${stad.name_en}, ${stad.city_en}` : "",
+              played: isFinished,
+              score: isFinished || isLive ? `${g.home_score} - ${g.away_score}` : undefined,
+            };
+          });
+        setFixtures(mapped);
+      }
+
+      if (groupsRes.ok) {
+        const groupsData = await groupsRes.json();
+        setLiveGroups(groupsData.groups || []);
+      }
+
+      if (teamsRes.ok) {
+        const teamsData = await teamsRes.json();
+        setLiveTeams(teamsData.teams || []);
+      }
+
+      setLastUpdated(new Date());
+    } catch (err: any) {
+      console.error("Live data fetch failed:", err);
+    } finally {
+      setLoadingLive(false);
     }
   };
 
@@ -301,9 +373,19 @@ export default function App() {
             </button>
           </nav>
 
-          {/* System status display */}
-          <div className="hidden md:block text-xs text-subtle font-semibold" id="system-status">
-            System Status: <span className="text-[#10B981] font-bold">Live Data</span>
+          {/* Live data indicator */}
+          <div className="hidden md:flex items-center gap-2 text-xs text-subtle font-semibold" id="system-status">
+            {loadingLive ? (
+              <><Loader2 className="w-3 h-3 animate-spin text-accent" /> <span className="text-accent">Syncing...</span></>
+            ) : (
+              <><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+              <span className="text-emerald-600 font-bold">Live</span>
+              {lastUpdated && <span className="text-subtle font-normal">· {lastUpdated.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>}
+              <button onClick={fetchLiveData} title="Refresh" className="ml-1 hover:text-accent transition-colors cursor-pointer">
+                <RefreshCw className="w-3 h-3" />
+              </button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -559,68 +641,107 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Fixture Schedule Block */}
+                {/* Live Fixture Schedule Block */}
                 <div className="sleek-card p-5" id="fixtures-schedule-container">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <Tv className="w-4 h-4 text-rose-500" />
                       <h3 className="font-bold text-sm tracking-tight text-brand-dark" id="schedule-heading">
-                        FIFA 2026 World Cup Heavyweight Group Showdowns
+                        FIFA 2026 — Live Match Schedule
                       </h3>
                     </div>
-                    <span className="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">Exhibition Schedule</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span className="text-[10px] font-bold text-emerald-600">LIVE DATA</span>
+                    </div>
                   </div>
 
+                  {loadingLive && fixtures.length === 0 ? (
+                    <div className="flex items-center justify-center py-10 gap-2 text-subtle text-xs">
+                      <Loader2 className="w-4 h-4 animate-spin text-accent" /> Loading live matches...
+                    </div>
+                  ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4" id="fixtures-list-container">
                     {fixtures.map((fixture) => {
+                      const liveGame = liveGames.find(g => g.home_team_name_en === fixture.teamA && g.away_team_name_en === fixture.teamB);
+                      const liveTeamA = liveTeams.find(t => t.name_en === fixture.teamA);
+                      const liveTeamB = liveTeams.find(t => t.name_en === fixture.teamB);
                       const tA = teams.find(t => t.team_name === fixture.teamA);
                       const tB = teams.find(t => t.team_name === fixture.teamB);
+                      const isFinished = liveGame?.finished === "TRUE";
+                      const isLive = liveGame && liveGame.time_elapsed !== "notstarted" && liveGame.time_elapsed !== "finished" && !isFinished;
+                      const flagA = liveTeamA?.flag || (tA?.flag_emoji ? undefined : undefined);
+                      const flagB = liveTeamB?.flag || undefined;
                       return (
-                        <div 
+                        <div
                           key={fixture.id}
-                          className="bg-bg-sleek p-3 rounded-lg border border-border-sleek text-xs space-y-3 hover:border-gray-300 transition-all font-medium"
+                          className={`bg-bg-sleek p-3 rounded-lg border text-xs space-y-2.5 transition-all font-medium ${
+                            isLive ? "border-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.15)]" :
+                            isFinished ? "border-gray-300" : "border-border-sleek hover:border-gray-300"
+                          }`}
                           id={`fixture-card-${fixture.id}`}
                         >
                           {/* Fixture Metadata */}
-                          <div className="flex items-center justify-between text-[10px] text-subtle font-semibold">
-                            <span className="font-bold bg-white border border-border-sleek px-1.5 py-0.2 rounded">Group {fixture.group}</span>
-                            <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-accent" /> {fixture.date}</span>
-                          </div>
-
-                          {/* Matchup Teams Banner */}
-                          <div className="flex items-center justify-around font-bold py-1.5 bg-white rounded border border-border-sleek text-brand-dark">
+                          <div className="flex items-center justify-between text-[10px] font-semibold">
+                            <span className="font-bold bg-white border border-border-sleek px-1.5 py-0.5 rounded text-subtle">Group {fixture.group}</span>
                             <div className="flex items-center gap-1.5">
-                              <FlagImage emoji={tA?.flag_emoji} className="w-[1.25em] h-[0.9em]" />
-                              <span>{fixture.teamA}</span>
-                            </div>
-                            <span className="text-subtle text-[10px]">VS</span>
-                            <div className="flex items-center gap-1.5">
-                              <span>{fixture.teamB}</span>
-                              <FlagImage emoji={tB?.flag_emoji} className="w-[1.25em] h-[0.9em]" />
+                              {isLive && <span className="flex items-center gap-1 text-emerald-600 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>LIVE {liveGame?.time_elapsed}</span>}
+                              {isFinished && <span className="bg-gray-800 text-white px-2 py-0.5 rounded font-bold">FT</span>}
+                              {!isLive && !isFinished && <span className="flex items-center gap-1 text-subtle"><Clock className="w-3 h-3" />{fixture.time}</span>}
+                              <span className="flex items-center gap-1 text-subtle"><Calendar className="w-3 h-3 text-accent" />{fixture.date}</span>
                             </div>
                           </div>
 
-                          {/* Predict Quick Button */}
-                          <div className="flex items-center justify-between pt-1">
-                            <span className="text-[10px] text-subtle flex items-center gap-1 font-semibold"><MapPin className="w-3 h-3 text-accent" /> {fixture.stadium.split(",")[0]}</span>
-                            <button
-                              onClick={() => {
-                                setTeamASelected(fixture.teamA);
-                                setTeamBSelected(fixture.teamB);
-                                setActiveTab("center");
-                                // Auto load predict
-                                triggerPrediction();
-                              }}
-                              className="bg-accent text-white font-bold px-2.5 py-1 rounded text-[10px] cursor-pointer hover:bg-accent/90 transition-colors"
-                              id={`fixture-btn-predict-${fixture.id}`}
-                            >
-                              Predict Match
-                            </button>
+                          {/* Matchup Teams + Score Banner */}
+                          <div className="flex items-center justify-around font-bold py-2 bg-white rounded border border-border-sleek text-brand-dark">
+                            <div className="flex items-center gap-1.5">
+                              {flagA ? <img src={flagA} alt={fixture.teamA} className="h-4 shadow-sm rounded-[2px]" /> : <FlagImage emoji={tA?.flag_emoji} className="w-[1.25em] h-[0.9em]" />}
+                              <span className="text-[11px]">{fixture.teamA}</span>
+                            </div>
+                            {(isFinished || isLive) && fixture.score ? (
+                              <span className={`text-sm font-extrabold px-2 py-0.5 rounded ${
+                                isLive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-800"
+                              }`}>{fixture.score}</span>
+                            ) : (
+                              <span className="text-subtle text-[10px] font-bold">VS</span>
+                            )}
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[11px]">{fixture.teamB}</span>
+                              {flagB ? <img src={flagB} alt={fixture.teamB} className="h-4 shadow-sm rounded-[2px]" /> : <FlagImage emoji={tB?.flag_emoji} className="w-[1.25em] h-[0.9em]" />}
+                            </div>
+                          </div>
+
+                          {/* Scorers (if finished/live) */}
+                          {isFinished && liveGame && liveGame.home_scorers && liveGame.home_scorers !== "null" && (
+                            <div className="text-[10px] text-subtle font-semibold px-1 flex justify-between">
+                              <span className="text-emerald-700">{liveGame.home_scorers.replace(/[{}"]|null/g, "")}</span>
+                              <span className="text-rose-600">{liveGame.away_scorers !== "null" ? liveGame.away_scorers.replace(/[{}"]|null/g, "") : ""}</span>
+                            </div>
+                          )}
+
+                          {/* Stadium + Predict Button */}
+                          <div className="flex items-center justify-between pt-0.5">
+                            <span className="text-[10px] text-subtle flex items-center gap-1 font-semibold truncate max-w-[55%]"><MapPin className="w-3 h-3 text-accent shrink-0" />{fixture.stadium.split(",")[0]}</span>
+                            {!isFinished && (
+                              <button
+                                onClick={() => {
+                                  setTeamASelected(fixture.teamA);
+                                  setTeamBSelected(fixture.teamB);
+                                  setActiveTab("center");
+                                  triggerPrediction();
+                                }}
+                                className="bg-accent text-white font-bold px-2.5 py-1 rounded text-[10px] cursor-pointer hover:bg-accent/90 transition-colors shrink-0"
+                                id={`fixture-btn-predict-${fixture.id}`}
+                              >
+                                Predict
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
                     })}
                   </div>
+                  )}
                 </div>
 
               </div>
@@ -932,96 +1053,129 @@ export default function App() {
         {/* SCREEN 3: GROUP STANDINGS */}
         {!loadingTeams && activeTab === "stands" && (
           <div className="space-y-6" id="screen-group-standings">
-            
+
             <div className="sleek-card p-6 flex flex-col md:flex-row items-center justify-between gap-4" id="standings-intro">
               <div>
                 <h2 className="text-xl font-bold tracking-tight text-display text-brand-dark flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-yellow-600" />
-                  FIFA 2026 World Cup Group Tables & Leaderboards
+                  FIFA 2026 World Cup — Live Group Standings
                 </h2>
                 <p className="text-sm text-subtle mt-1 leading-relaxed">
-                  Analyze dynamic positions for groups A through L. Standing sorting indexes are mathematically parsed based on ELO quality score and recent form.
+                  Real-time standings from the official tournament. Updated automatically every 60 seconds.
                 </p>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="font-bold text-emerald-600">Live Data</span>
+                <button onClick={fetchLiveData} className="flex items-center gap-1 text-subtle hover:text-accent transition-colors cursor-pointer ml-2 font-semibold">
+                  <RefreshCw className="w-3.5 h-3.5" /> Refresh
+                </button>
               </div>
             </div>
 
             {/* Selector bar for Groups A-L */}
             <div className="sleek-card p-3.5 flex flex-wrap gap-1.5 justify-around" id="group-tabs-selector">
-              {["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"].map(letter => (
+              {["A","B","C","D","E","F","G","H","I","J","K","L"].map(letter => (
                 <button
                   key={letter}
                   onClick={() => setSelectedGroup(letter)}
                   className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
-                    selectedGroup === letter
-                      ? "bg-accent text-white shadow-sm"
-                      : "bg-bg-sleek text-subtle hover:bg-gray-200"
+                    selectedGroup === letter ? "bg-accent text-white shadow-sm" : "bg-bg-sleek text-subtle hover:bg-gray-200"
                   }`}
                   id={`tab-select-group-${letter}`}
-                >
-                  Group {letter}
-                </button>
+                >Group {letter}</button>
               ))}
             </div>
 
             {/* Standing and Leaderboards grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              
-              {/* Left Column: Group Table */}
+
+              {/* Left Column: Live Group Table */}
               <div className="lg:col-span-7 sleek-card p-5 space-y-4" id="group-standings-table-container">
                 <h3 className="font-bold text-sm text-brand-dark flex items-center justify-between">
-                  <span>WORLD CUP GROUP {selectedGroup} STANDINGS</span>
-                  <span className="text-[10px] text-accent font-bold bg-[#EFF3FF] px-2 py-0.5 rounded">Dynamic Prediction</span>
+                  <span>GROUP {selectedGroup} TABLE</span>
+                  <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Live
+                  </span>
                 </h3>
 
-                <div className="overflow-x-auto" id="table-scroll-container">
-                  <table className="w-full text-xs text-left" id="group-standings-table">
-                    <thead>
-                      <tr className="border-b border-border-sleek text-subtle uppercase tracking-wider text-[10px]">
-                        <th className="py-2.5">Pos</th>
-                        <th className="py-2.5">Nation</th>
-                        <th className="py-2.5 text-center">Elo Rating</th>
-                        <th className="py-2.5 text-center">Form</th>
-                        <th className="py-2.5 text-center">Avg Scored</th>
-                        <th className="py-2.5 text-center">Avg Conceded</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getGroupTeamsSorted(selectedGroup).map((team, idx) => (
-                        <tr 
-                          key={team.team_name} 
-                          className="border-b border-bg-sleek last:border-0 hover:bg-bg-sleek/50 transition-all font-medium text-brand-dark"
-                          id={`row-standing-${team.team_name}`}
-                        >
-                          <td className="py-3 font-bold pr-1">{idx + 1}</td>
-                          <td className="py-3 flex items-center gap-2">
-                            <FlagImage emoji={team.flag_emoji} className="w-[1.25em] h-[0.9em] text-xl mr-0.5" />
-                            <span className="font-bold text-brand-dark">{team.team_name}</span>
-                          </td>
-                          <td className="py-3 text-center">{team.elo_rating}</td>
-                          <td className="py-3 text-center">
-                            <div className="flex items-center justify-center gap-0.5">
-                              {team.recent_form.split(",").map((result, i) => (
-                                <span 
-                                  key={i} 
-                                  className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white ${
-                                    result === "W" ? "bg-emerald-500" : result === "D" ? "bg-yellow-500" : "bg-red-500"
-                                  }`}
-                                >
-                                  {result}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="py-3 text-center font-mono">{team.avg_goals_scored.toFixed(2)}</td>
-                          <td className="py-3 text-center font-mono">{team.avg_goals_conceded.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {(() => {
+                  const liveGroup = liveGroups.find(g => g.name === selectedGroup);
+                  const groupTeamsSorted = liveGroup
+                    ? [...liveGroup.teams].sort((a, b) => {
+                        const pts = parseInt(b.pts) - parseInt(a.pts);
+                        if (pts !== 0) return pts;
+                        const gd = parseInt(b.gd) - parseInt(a.gd);
+                        if (gd !== 0) return gd;
+                        return parseInt(b.gf) - parseInt(a.gf);
+                      })
+                    : [];
 
-                <div className="bg-[#EFF3FF]/50 p-3 rounded-lg text-xs text-accent leading-relaxed font-semibold border border-[#EFF3FF]/40" id="group-qualification-p-tag">
-                  Top 2 positions within each group automatically advance, alongside the top 8 best third-place teams to complete the Round of 32 knockout bracket.
+                  return (
+                    <div className="overflow-x-auto" id="table-scroll-container">
+                      <table className="w-full text-xs text-left" id="group-standings-table">
+                        <thead>
+                          <tr className="border-b border-border-sleek text-subtle uppercase tracking-wider text-[10px]">
+                            <th className="py-2.5 pr-2">#</th>
+                            <th className="py-2.5">Nation</th>
+                            <th className="py-2.5 text-center">MP</th>
+                            <th className="py-2.5 text-center">W</th>
+                            <th className="py-2.5 text-center">D</th>
+                            <th className="py-2.5 text-center">L</th>
+                            <th className="py-2.5 text-center">GF</th>
+                            <th className="py-2.5 text-center">GA</th>
+                            <th className="py-2.5 text-center">GD</th>
+                            <th className="py-2.5 text-center font-extrabold text-accent">PTS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groupTeamsSorted.map((entry, idx) => {
+                            const liveTeamInfo = liveTeams.find(t => t.id === entry.team_id);
+                            const fallbackTeam = teams.find(t => t.team_name === liveTeamInfo?.name_en);
+                            const name = liveTeamInfo?.name_en || `Team ${entry.team_id}`;
+                            const flag = liveTeamInfo?.flag;
+                            const isQualifying = idx < 2;
+                            return (
+                              <tr
+                                key={entry.team_id}
+                                className={`border-b border-bg-sleek last:border-0 transition-all font-medium text-brand-dark ${
+                                  isQualifying ? "bg-emerald-50/40" : "hover:bg-bg-sleek/50"
+                                }`}
+                                id={`row-standing-${entry.team_id}`}
+                              >
+                                <td className="py-3 font-bold pr-2">
+                                  <span className={`w-5 h-5 rounded-full inline-flex items-center justify-center text-[10px] font-bold ${
+                                    isQualifying ? "bg-emerald-500 text-white" : "bg-bg-sleek text-subtle"
+                                  }`}>{idx + 1}</span>
+                                </td>
+                                <td className="py-3">
+                                  <div className="flex items-center gap-2">
+                                    {flag ? <img src={flag} alt={name} className="h-4 rounded-[2px] shadow-sm" /> : <FlagImage emoji={fallbackTeam?.flag_emoji} className="w-[1.25em] h-[0.9em]" />}
+                                    <span className="font-bold">{name}</span>
+                                  </div>
+                                </td>
+                                <td className="py-3 text-center text-subtle">{entry.mp}</td>
+                                <td className="py-3 text-center text-emerald-600 font-bold">{entry.w}</td>
+                                <td className="py-3 text-center text-yellow-600 font-bold">{entry.d}</td>
+                                <td className="py-3 text-center text-red-500 font-bold">{entry.l}</td>
+                                <td className="py-3 text-center">{entry.gf}</td>
+                                <td className="py-3 text-center">{entry.ga}</td>
+                                <td className="py-3 text-center">{entry.gd}</td>
+                                <td className="py-3 text-center">
+                                  <span className="font-extrabold text-accent bg-[#EFF3FF] px-2 py-0.5 rounded">{entry.pts}</span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
+
+                <div className="bg-emerald-50 p-3 rounded-lg text-xs text-emerald-700 leading-relaxed font-semibold border border-emerald-100 flex items-center gap-2" id="group-qualification-p-tag">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 shrink-0"></span>
+                  Top 2 teams qualify automatically. 8 best third-placed teams also advance to Round of 32.
                 </div>
               </div>
 

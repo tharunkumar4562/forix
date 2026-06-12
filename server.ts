@@ -343,6 +343,64 @@ app.get("/api/news", async (req, res) => {
 
 
 // -------------------------------------------------------------
+// Live Data Proxy Routes (worldcup26.ir)
+// 60-second server-side cache to avoid hammering the source API
+// -------------------------------------------------------------
+
+interface CacheEntry { data: any; ts: number; }
+const liveCache: Record<string, CacheEntry> = {};
+const CACHE_TTL_MS = 60_000; // 60 seconds
+
+async function fetchLive(url: string): Promise<any> {
+  const now = Date.now();
+  const cached = liveCache[url];
+  if (cached && now - cached.ts < CACHE_TTL_MS) {
+    return cached.data;
+  }
+  const res = await fetch(url, { headers: { "Accept": "application/json" } });
+  if (!res.ok) throw new Error(`Upstream ${url} returned ${res.status}`);
+  const data = await res.json();
+  liveCache[url] = { data, ts: now };
+  return data;
+}
+
+app.get("/api/live/games", async (_req, res) => {
+  try {
+    const data = await fetchLive("https://worldcup26.ir/get/games");
+    res.json(data);
+  } catch (err: any) {
+    res.status(502).json({ error: "Failed to fetch live games", message: err.message });
+  }
+});
+
+app.get("/api/live/groups", async (_req, res) => {
+  try {
+    const data = await fetchLive("https://worldcup26.ir/get/groups");
+    res.json(data);
+  } catch (err: any) {
+    res.status(502).json({ error: "Failed to fetch live groups", message: err.message });
+  }
+});
+
+app.get("/api/live/teams", async (_req, res) => {
+  try {
+    const data = await fetchLive("https://worldcup26.ir/get/teams");
+    res.json(data);
+  } catch (err: any) {
+    res.status(502).json({ error: "Failed to fetch live teams", message: err.message });
+  }
+});
+
+app.get("/api/live/stadiums", async (_req, res) => {
+  try {
+    const data = await fetchLive("https://worldcup26.ir/get/stadiums");
+    res.json(data);
+  } catch (err: any) {
+    res.status(502).json({ error: "Failed to fetch live stadiums", message: err.message });
+  }
+});
+
+// -------------------------------------------------------------
 // Vite and Static Assets Routing Setup
 // -------------------------------------------------------------
 
