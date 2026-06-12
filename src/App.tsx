@@ -1003,7 +1003,7 @@ export default function App() {
 
                       {/* Simulator trigger button */}
                       <button
-                        onClick={triggerPrediction}
+                        onClick={() => triggerPrediction()}
                         disabled={loadingPrediction}
                         className="w-full bg-accent hover:bg-accent/90 text-white font-extrabold tracking-wide py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50 cursor-pointer h-12"
                         id="btn-trigger-ai-prediction"
