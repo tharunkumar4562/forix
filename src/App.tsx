@@ -225,17 +225,23 @@ export default function App() {
     }
   };
 
-  const triggerPrediction = async () => {
-    if (teamASelected === teamBSelected) {
+  const triggerPrediction = async (overrideA?: string, overrideB?: string) => {
+    const tA = overrideA ?? teamASelected;
+    const tB = overrideB ?? teamBSelected;
+
+    if (tA === tB) {
       alert("Please select two different national teams for prediction.");
       return;
     }
+
+    // Sync state if overrides provided (so dropdowns update)
+    if (overrideA) setTeamASelected(overrideA);
+    if (overrideB) setTeamBSelected(overrideB);
     
     try {
       setLoadingPrediction(true);
       setPrediction(null);
       
-      // Dynamic loading quotes list
       const quotes = [
         "Analyzing historical Elo differentials...",
         "Evaluating offensive/defensive goal averages...",
@@ -253,7 +259,7 @@ export default function App() {
       const response = await fetch("/api/prediction", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamA: teamASelected, teamB: teamBSelected })
+        body: JSON.stringify({ teamA: tA, teamB: tB })
       });
 
       clearInterval(quoteInterval);
@@ -267,16 +273,26 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       setErrorText("The neural predictor encountered an issue. Using local metric algorithms for fallback prediction.");
-      // Rule-based fallback calculation
-      simulateLocalFallback();
+      simulateLocalFallback(tA, tB);
     } finally {
       setLoadingPrediction(false);
     }
   };
 
-  const simulateLocalFallback = () => {
-    const tA = teams.find(t => t.team_name === teamASelected);
-    const tB = teams.find(t => t.team_name === teamBSelected);
+  const simulateLocalFallback = (forceA?: string, forceB?: string) => {
+    // Name alias map (mirrors server)
+    const NAME_ALIASES: Record<string, string> = {
+      "united states": "USA", "czech republic": "Czechia",
+      "democratic republic of the congo": "DR Congo",
+      "curaçao": "Curacao", "türkiye": "Turkey",
+      "cabo verde": "Cape Verde", "korea republic": "South Korea",
+    };
+    const norm = (n: string) => NAME_ALIASES[n.toLowerCase()] || n;
+
+    const nameA = norm(forceA ?? teamASelected);
+    const nameB = norm(forceB ?? teamBSelected);
+    const tA = teams.find(t => t.team_name.toLowerCase() === nameA.toLowerCase());
+    const tB = teams.find(t => t.team_name.toLowerCase() === nameB.toLowerCase());
     if (!tA || !tB) return;
 
     const eloDiff = tA.elo_rating - tB.elo_rating;
@@ -718,7 +734,7 @@ export default function App() {
                             <span className="text-[10px] text-subtle flex items-center gap-1 font-semibold truncate max-w-[55%]"><MapPin className="w-3 h-3 text-accent shrink-0" />{fixture.stadium.split(",")[0]}</span>
                             {!isFinished && (
                               <button
-                                onClick={() => { setTeamASelected(fixture.teamA); setTeamBSelected(fixture.teamB); setActiveTab("center"); triggerPrediction(); }}
+                                onClick={() => { setActiveTab("center"); triggerPrediction(fixture.teamA, fixture.teamB); }}
                                 className="bg-accent text-white font-bold px-2.5 py-1 rounded text-[10px] cursor-pointer hover:bg-accent/90 transition-colors shrink-0"
                                 id={`fixture-btn-predict-${fixture.id}`}
                               >Predict</button>

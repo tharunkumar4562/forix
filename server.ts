@@ -137,12 +137,36 @@ app.post("/api/prediction", async (req, res) => {
   }
 
   try {
+    // Normalize live API team names → database.csv team names
+    const NAME_ALIASES: Record<string, string> = {
+      "united states": "USA",
+      "usa": "USA",
+      "czech republic": "Czechia",
+      "democratic republic of the congo": "DR Congo",
+      "dr congo": "DR Congo",
+      "ivory coast": "Ivory Coast",
+      "cote d'ivoire": "Ivory Coast",
+      "curacao": "Curacao",
+      "curaçao": "Curacao",
+      "cape verde": "Cape Verde",
+      "cabo verde": "Cape Verde",
+      "south korea": "South Korea",
+      "korea republic": "South Korea",
+      "türkiye": "Turkey",
+      "turkey": "Turkey",
+    };
+    const normalizeTeam = (name: string): string => NAME_ALIASES[name.toLowerCase()] || name;
+
+    const normalizedA = normalizeTeam(teamA);
+    const normalizedB = normalizeTeam(teamB);
+
     const allTeams = loadTeamsDatabase();
-    const teamAData = allTeams.find(t => t.team_name.toLowerCase() === teamA.toLowerCase());
-    const teamBData = allTeams.find(t => t.team_name.toLowerCase() === teamB.toLowerCase());
+    const teamAData = allTeams.find(t => t.team_name.toLowerCase() === normalizedA.toLowerCase());
+    const teamBData = allTeams.find(t => t.team_name.toLowerCase() === normalizedB.toLowerCase());
 
     if (!teamAData || !teamBData) {
-      return res.status(404).json({ error: "One or both teams not found in database.csv" });
+      console.error(`Teams not found: '${normalizedA}' (from '${teamA}'), '${normalizedB}' (from '${teamB}')`);
+      return res.status(404).json({ error: `Teams not found in database: '${normalizedA}', '${normalizedB}'` });
     }
 
     // Build prediction context
