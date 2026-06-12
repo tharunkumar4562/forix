@@ -252,8 +252,30 @@ app.post("/api/prediction", async (req, res) => {
       const tB_prob = Math.round((baseB / total) * 100);
       const d_prob = 100 - tA_prob - tB_prob;
 
-      const scoreA = Math.max(0, Math.round(((teamAData.avg_goals_scored + teamBData.avg_goals_conceded) / 2) + (eloDiff / 400) + (Math.random() * 1.5 - 0.5)));
-      const scoreB = Math.max(0, Math.round(((teamBData.avg_goals_scored + teamAData.avg_goals_conceded) / 2) - (eloDiff / 400) + (Math.random() * 1.5 - 0.5)));
+      // Deterministic expected goals calculation based on team stats and ELO differential
+      const lambdaA = ((teamAData.avg_goals_scored + teamBData.avg_goals_conceded) / 2) + (eloDiff / 600);
+      const lambdaB = ((teamBData.avg_goals_scored + teamAData.avg_goals_conceded) / 2) - (eloDiff / 600);
+
+      let scoreA = Math.max(0, Math.round(lambdaA));
+      let scoreB = Math.max(0, Math.round(lambdaB));
+
+      // Align predicted scoreline with win probabilities
+      if (tA_prob > tB_prob + 5) {
+        if (scoreA <= scoreB) {
+          scoreA = scoreB + 1;
+        }
+      } else if (tB_prob > tA_prob + 5) {
+        if (scoreB <= scoreA) {
+          scoreB = scoreA + 1;
+        }
+      } else {
+        // It's a draw or very close match
+        if (scoreA !== scoreB) {
+          const avg = Math.round((scoreA + scoreB) / 2);
+          scoreA = avg;
+          scoreB = avg;
+        }
+      }
 
       predictionResult = {
         teamA_win_prob: tA_prob,

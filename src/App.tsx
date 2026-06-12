@@ -241,8 +241,8 @@ export default function App() {
     };
     const norm = (n: string) => NAME_ALIASES[n.toLowerCase()] || n;
 
-    const teamA = norm(overrideA ?? teamASelected);
-    const teamB = norm(overrideB ?? teamBSelected);
+    const teamA = norm((overrideA && typeof overrideA === "string") ? overrideA : teamASelected);
+    const teamB = norm((overrideB && typeof overrideB === "string") ? overrideB : teamBSelected);
 
     if (teamA === teamB) {
       alert("Please select two different national teams for prediction.");
@@ -288,7 +288,7 @@ export default function App() {
       setPrediction(result);
     } catch (err: any) {
       console.error(err);
-      setErrorText("The neural predictor encountered an issue. Using local metric algorithms for fallback prediction.");
+      setErrorText("The predictor encountered an issue. Using local metric algorithms for fallback prediction.");
       simulateLocalFallback(teamA, teamB);
     } finally {
       setLoadingPrediction(false);
@@ -297,17 +297,23 @@ export default function App() {
 
 
   const simulateLocalFallback = (forceA?: string, forceB?: string) => {
-    // Name alias map (mirrors server)
+    // Name alias map (mirrors triggerPrediction)
     const NAME_ALIASES: Record<string, string> = {
-      "united states": "USA", "czech republic": "Czechia",
+      "united states": "USA",
+      "czech republic": "Czechia",
       "democratic republic of the congo": "DR Congo",
-      "curaçao": "Curacao", "türkiye": "Turkey",
-      "cabo verde": "Cape Verde", "korea republic": "South Korea",
+      "dr congo": "DR Congo",
+      "curaçao": "Curacao",
+      "türkiye": "Turkey",
+      "cabo verde": "Cape Verde",
+      "korea republic": "South Korea",
+      "ivory coast": "Ivory Coast",
+      "cote d'ivoire": "Ivory Coast",
     };
     const norm = (n: string) => NAME_ALIASES[n.toLowerCase()] || n;
 
-    const nameA = norm(forceA ?? teamASelected);
-    const nameB = norm(forceB ?? teamBSelected);
+    const nameA = norm((forceA && typeof forceA === "string") ? forceA : teamASelected);
+    const nameB = norm((forceB && typeof forceB === "string") ? forceB : teamBSelected);
     const tA = teams.find(t => t.team_name.toLowerCase() === nameA.toLowerCase());
     const tB = teams.find(t => t.team_name.toLowerCase() === nameB.toLowerCase());
     if (!tA || !tB) return;
@@ -327,8 +333,30 @@ export default function App() {
     const tB_prob = Math.round((baseB / total) * 100);
     const d_prob = 100 - tA_prob - tB_prob;
 
-    const scoreA = Math.max(0, Math.round(tA.avg_goals_scored + (eloDiff > 200 ? 1 : 0) - 0.2));
-    const scoreB = Math.max(0, Math.round(tA.avg_goals_conceded + 0.2));
+    // Deterministic expected goals calculation based on team stats and ELO differential
+    const lambdaA = ((tA.avg_goals_scored + tB.avg_goals_conceded) / 2) + (eloDiff / 600);
+    const lambdaB = ((tB.avg_goals_scored + tA.avg_goals_conceded) / 2) - (eloDiff / 600);
+
+    let scoreA = Math.max(0, Math.round(lambdaA));
+    let scoreB = Math.max(0, Math.round(lambdaB));
+
+    // Align predicted scoreline with win probabilities
+    if (tA_prob > tB_prob + 5) {
+      if (scoreA <= scoreB) {
+        scoreA = scoreB + 1;
+      }
+    } else if (tB_prob > tA_prob + 5) {
+      if (scoreB <= scoreA) {
+        scoreB = scoreA + 1;
+      }
+    } else {
+      // It's a draw or very close match
+      if (scoreA !== scoreB) {
+        const avg = Math.round((scoreA + scoreB) / 2);
+        scoreA = avg;
+        scoreB = avg;
+      }
+    }
 
     setPrediction({
       teamA_win_prob: tA_prob,
