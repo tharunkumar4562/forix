@@ -83,6 +83,7 @@ export default function App() {
 
   // Standings state
   const [selectedGroup, setSelectedGroup] = useState<string>("A");
+  const [showResults, setShowResults] = useState<boolean>(false);
 
   // Fetch initial data on mount
   useEffect(() => {
@@ -660,9 +661,9 @@ export default function App() {
                     <div className="flex items-center justify-center py-10 gap-2 text-subtle text-xs">
                       <Loader2 className="w-4 h-4 animate-spin text-accent" /> Loading live matches...
                     </div>
-                  ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4" id="fixtures-list-container">
-                    {fixtures.map((fixture) => {
+                  ) : (() => {
+                    // Helper to render a fixture card
+                    const renderCard = (fixture: MatchFixture) => {
                       const liveGame = liveGames.find(g => g.home_team_name_en === fixture.teamA && g.away_team_name_en === fixture.teamB);
                       const liveTeamA = liveTeams.find(t => t.name_en === fixture.teamA);
                       const liveTeamB = liveTeams.find(t => t.name_en === fixture.teamB);
@@ -670,29 +671,26 @@ export default function App() {
                       const tB = teams.find(t => t.team_name === fixture.teamB);
                       const isFinished = liveGame?.finished === "TRUE";
                       const isLive = liveGame && liveGame.time_elapsed !== "notstarted" && liveGame.time_elapsed !== "finished" && !isFinished;
-                      const flagA = liveTeamA?.flag || (tA?.flag_emoji ? undefined : undefined);
-                      const flagB = liveTeamB?.flag || undefined;
+                      const flagA = liveTeamA?.flag;
+                      const flagB = liveTeamB?.flag;
                       return (
                         <div
                           key={fixture.id}
                           className={`bg-bg-sleek p-3 rounded-lg border text-xs space-y-2.5 transition-all font-medium ${
                             isLive ? "border-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.15)]" :
-                            isFinished ? "border-gray-300" : "border-border-sleek hover:border-gray-300"
+                            isFinished ? "border-gray-200 opacity-80" : "border-border-sleek hover:border-gray-300"
                           }`}
                           id={`fixture-card-${fixture.id}`}
                         >
-                          {/* Fixture Metadata */}
                           <div className="flex items-center justify-between text-[10px] font-semibold">
                             <span className="font-bold bg-white border border-border-sleek px-1.5 py-0.5 rounded text-subtle">Group {fixture.group}</span>
                             <div className="flex items-center gap-1.5">
                               {isLive && <span className="flex items-center gap-1 text-emerald-600 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>LIVE {liveGame?.time_elapsed}</span>}
-                              {isFinished && <span className="bg-gray-800 text-white px-2 py-0.5 rounded font-bold">FT</span>}
+                              {isFinished && <span className="bg-gray-700 text-white px-2 py-0.5 rounded font-bold text-[9px] tracking-widest">FULL TIME</span>}
                               {!isLive && !isFinished && <span className="flex items-center gap-1 text-subtle"><Clock className="w-3 h-3" />{fixture.time}</span>}
                               <span className="flex items-center gap-1 text-subtle"><Calendar className="w-3 h-3 text-accent" />{fixture.date}</span>
                             </div>
                           </div>
-
-                          {/* Matchup Teams + Score Banner */}
                           <div className="flex items-center justify-around font-bold py-2 bg-white rounded border border-border-sleek text-brand-dark">
                             <div className="flex items-center gap-1.5">
                               {flagA ? <img src={flagA} alt={fixture.teamA} className="h-4 shadow-sm rounded-[2px]" /> : <FlagImage emoji={tA?.flag_emoji} className="w-[1.25em] h-[0.9em]" />}
@@ -700,7 +698,7 @@ export default function App() {
                             </div>
                             {(isFinished || isLive) && fixture.score ? (
                               <span className={`text-sm font-extrabold px-2 py-0.5 rounded ${
-                                isLive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-800"
+                                isLive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"
                               }`}>{fixture.score}</span>
                             ) : (
                               <span className="text-subtle text-[10px] font-bold">VS</span>
@@ -710,38 +708,73 @@ export default function App() {
                               {flagB ? <img src={flagB} alt={fixture.teamB} className="h-4 shadow-sm rounded-[2px]" /> : <FlagImage emoji={tB?.flag_emoji} className="w-[1.25em] h-[0.9em]" />}
                             </div>
                           </div>
-
-                          {/* Scorers (if finished/live) */}
                           {isFinished && liveGame && liveGame.home_scorers && liveGame.home_scorers !== "null" && (
-                            <div className="text-[10px] text-subtle font-semibold px-1 flex justify-between">
+                            <div className="text-[10px] font-semibold px-1 flex justify-between">
                               <span className="text-emerald-700">{liveGame.home_scorers.replace(/[{}"]|null/g, "")}</span>
                               <span className="text-rose-600">{liveGame.away_scorers !== "null" ? liveGame.away_scorers.replace(/[{}"]|null/g, "") : ""}</span>
                             </div>
                           )}
-
-                          {/* Stadium + Predict Button */}
                           <div className="flex items-center justify-between pt-0.5">
                             <span className="text-[10px] text-subtle flex items-center gap-1 font-semibold truncate max-w-[55%]"><MapPin className="w-3 h-3 text-accent shrink-0" />{fixture.stadium.split(",")[0]}</span>
                             {!isFinished && (
                               <button
-                                onClick={() => {
-                                  setTeamASelected(fixture.teamA);
-                                  setTeamBSelected(fixture.teamB);
-                                  setActiveTab("center");
-                                  triggerPrediction();
-                                }}
+                                onClick={() => { setTeamASelected(fixture.teamA); setTeamBSelected(fixture.teamB); setActiveTab("center"); triggerPrediction(); }}
                                 className="bg-accent text-white font-bold px-2.5 py-1 rounded text-[10px] cursor-pointer hover:bg-accent/90 transition-colors shrink-0"
                                 id={`fixture-btn-predict-${fixture.id}`}
-                              >
-                                Predict
-                              </button>
+                              >Predict</button>
                             )}
                           </div>
                         </div>
                       );
-                    })}
-                  </div>
-                  )}
+                    };
+
+                    const upcomingFixtures = fixtures.filter(f => {
+                      const g = liveGames.find(lg => lg.home_team_name_en === f.teamA && lg.away_team_name_en === f.teamB);
+                      return !g || g.finished !== "TRUE";
+                    });
+                    const finishedFixtures = fixtures.filter(f => {
+                      const g = liveGames.find(lg => lg.home_team_name_en === f.teamA && lg.away_team_name_en === f.teamB);
+                      return g && g.finished === "TRUE";
+                    });
+
+                    return (
+                      <div className="space-y-5">
+                        {/* ── UPCOMING MATCHES ── */}
+                        {upcomingFixtures.length > 0 && (
+                          <div>
+                            <p className="text-[10px] font-bold text-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>Upcoming Matches ({upcomingFixtures.length})
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" id="fixtures-list-container">
+                              {upcomingFixtures.map(renderCard)}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* ── RESULTS ── collapsible */}
+                        {finishedFixtures.length > 0 && (
+                          <div>
+                            <button
+                              onClick={() => setShowResults(v => !v)}
+                              className="w-full flex items-center justify-between text-[10px] font-bold text-subtle uppercase tracking-widest py-2.5 px-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
+                              id="toggle-results-btn"
+                            >
+                              <span className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+                                Results — {finishedFixtures.length} match{finishedFixtures.length !== 1 ? "es" : ""} completed
+                              </span>
+                              <span className={`transition-transform duration-200 ${showResults ? "rotate-180" : ""}`}>▼</span>
+                            </button>
+                            {showResults && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3" id="results-list-container">
+                                {finishedFixtures.map(renderCard)}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
               </div>
