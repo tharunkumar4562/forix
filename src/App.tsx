@@ -226,22 +226,38 @@ export default function App() {
   };
 
   const triggerPrediction = async (overrideA?: string, overrideB?: string) => {
-    const tA = overrideA ?? teamASelected;
-    const tB = overrideB ?? teamBSelected;
+    // Normalize live API names → DB names so state, dropdowns, and metrics all match
+    const NAME_ALIASES: Record<string, string> = {
+      "united states": "USA",
+      "czech republic": "Czechia",
+      "democratic republic of the congo": "DR Congo",
+      "dr congo": "DR Congo",
+      "curaçao": "Curacao",
+      "türkiye": "Turkey",
+      "cabo verde": "Cape Verde",
+      "korea republic": "South Korea",
+      "ivory coast": "Ivory Coast",
+      "cote d'ivoire": "Ivory Coast",
+    };
+    const norm = (n: string) => NAME_ALIASES[n.toLowerCase()] || n;
 
-    if (tA === tB) {
+    const teamA = norm(overrideA ?? teamASelected);
+    const teamB = norm(overrideB ?? teamBSelected);
+
+    if (teamA === teamB) {
       alert("Please select two different national teams for prediction.");
       return;
     }
 
-    // Sync state if overrides provided (so dropdowns update)
-    if (overrideA) setTeamASelected(overrideA);
-    if (overrideB) setTeamBSelected(overrideB);
-    
+    // Always sync state to the normalized (DB-canonical) name
+    // so the dropdown highlights correctly AND metrics panel finds the team
+    setTeamASelected(teamA);
+    setTeamBSelected(teamB);
+
     try {
       setLoadingPrediction(true);
       setPrediction(null);
-      
+
       const quotes = [
         "Analyzing historical Elo differentials...",
         "Evaluating offensive/defensive goal averages...",
@@ -259,7 +275,7 @@ export default function App() {
       const response = await fetch("/api/prediction", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamA: tA, teamB: tB })
+        body: JSON.stringify({ teamA, teamB })
       });
 
       clearInterval(quoteInterval);
@@ -273,11 +289,12 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       setErrorText("The neural predictor encountered an issue. Using local metric algorithms for fallback prediction.");
-      simulateLocalFallback(tA, tB);
+      simulateLocalFallback(teamA, teamB);
     } finally {
       setLoadingPrediction(false);
     }
   };
+
 
   const simulateLocalFallback = (forceA?: string, forceB?: string) => {
     // Name alias map (mirrors server)
