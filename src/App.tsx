@@ -40,6 +40,13 @@ function getFlagUrl(emoji: string) {
   return '';
 }
 
+function getFlagEmojiOrText(emoji: string) {
+  if (emoji === '🏴󠁧󠁢󠁳󠁣󠁴󠁿') return 'SCO';
+  if (emoji === '🏴󠁧󠁢󠁥󠁮󠁧󠁿') return 'ENG';
+  if (emoji === '🏴󠁧󠁢󠁷󠁬󠁳󠁿') return 'WAL';
+  return emoji;
+}
+
 const FlagImage = ({ emoji, className = "" }: { emoji?: string, className?: string }) => {
   if (!emoji) return <span className={className}>⚽</span>;
   const url = getFlagUrl(emoji);
@@ -956,7 +963,7 @@ export default function App() {
                       id="team-a-dropdown"
                     >
                       {teams.map(t => (
-                        <option key={t.team_name} value={t.team_name}>{t.flag_emoji} {t.team_name}</option>
+                        <option key={t.team_name} value={t.team_name}>{getFlagEmojiOrText(t.flag_emoji)} {t.team_name}</option>
                       ))}
                     </select>
                   </div>
@@ -977,7 +984,7 @@ export default function App() {
                       id="team-b-dropdown"
                     >
                       {teams.map(t => (
-                        <option key={t.team_name} value={t.team_name}>{t.flag_emoji} {t.team_name}</option>
+                        <option key={t.team_name} value={t.team_name}>{getFlagEmojiOrText(t.flag_emoji)} {t.team_name}</option>
                       ))}
                     </select>
                   </div>
