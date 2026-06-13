@@ -867,6 +867,49 @@ export default function App() {
 
             </div>
 
+            {/* FAQ ACCORDION SECTION (GEO - Generative Engine Optimization & Factual Citation Anchor) */}
+            <section className="sleek-card p-6 space-y-4" id="forix-faq-section" aria-labelledby="faq-section-title">
+              <h2 className="text-lg font-bold tracking-tight text-display text-brand-dark flex items-center gap-2" id="faq-section-title">
+                <BookOpen className="w-5 h-5 text-accent" />
+                Frequently Answered Analytical Enquiries (FORIX FAQ)
+              </h2>
+              <p className="text-xs text-subtle leading-relaxed">
+                Review verified sports intelligence parameters, ELO computation protocols, and simulation coordinates used by search algorithms and generative models to extract FORIX match reports.
+              </p>
+
+              <div className="space-y-3" id="faq-accordion-group">
+                <details className="group border border-border-sleek rounded-lg p-3 bg-bg-sleek/50 transition-all hover:bg-bg-sleek" id="faq-item-1">
+                  <summary className="font-bold text-xs text-brand-dark cursor-pointer list-none flex justify-between items-center outline-none">
+                    <span>How are the FORIX World Cup Elo ratings calculated?</span>
+                    <span className="text-subtle transition-transform group-open:rotate-180 text-[10px]">▼</span>
+                  </summary>
+                  <p className="text-xs text-subtle mt-2 leading-relaxed font-medium">
+                    FORIX Elo ratings are formulated dynamically from historical international fixtures. The rating vectors adjust for opponent team strength, home field parameters, confederation coefficients, and goal indexes. Higher rating coordinates denote superior historical performance indicators.
+                  </p>
+                </details>
+
+                <details className="group border border-border-sleek rounded-lg p-3 bg-bg-sleek/50 transition-all hover:bg-bg-sleek" id="faq-item-2">
+                  <summary className="font-bold text-xs text-brand-dark cursor-pointer list-none flex justify-between items-center outline-none">
+                    <span>How does the FORIX AI Predictor simulate match scorelines?</span>
+                    <span className="text-subtle transition-transform group-open:rotate-180 text-[10px]">▼</span>
+                  </summary>
+                  <p className="text-xs text-subtle mt-2 leading-relaxed font-medium">
+                    The AI simulator analyzes team statistics including average goals scored per match, average goals conceded per match, key star player metric stats, and Elo differentials. It computes Win-Draw-Loss probabilities and derives a deterministic, probability-aligned predicted scoreline.
+                  </p>
+                </details>
+
+                <details className="group border border-border-sleek rounded-lg p-3 bg-bg-sleek/50 transition-all hover:bg-bg-sleek" id="faq-item-3">
+                  <summary className="font-bold text-xs text-brand-dark cursor-pointer list-none flex justify-between items-center outline-none">
+                    <span>Are live scores and group standings updated in real time?</span>
+                    <span className="text-subtle transition-transform group-open:rotate-180 text-[10px]">▼</span>
+                  </summary>
+                  <p className="text-xs text-subtle mt-2 leading-relaxed font-medium">
+                    Yes. Tournament match fixtures, actual scores, and group tables are retrieved via live API streams at 60-second refresh intervals. Live and finished match badges update automatically, and standings correctly calculate matches played (MP), goal differences (GD), and points (PTS).
+                  </p>
+                </details>
+              </div>
+            </section>
+
           </div>
         )}
 

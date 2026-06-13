@@ -10,6 +10,38 @@
 
       gtag('config', 'G-T8M8LFE11H');
     </script>
+
+    <!-- JSON-LD Structured Schema for Generative Engine Optimization (GEO) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "FORIX WC 2026 AI Match Intelligence & Analytics",
+        "description": "Authoritative AI predictions, live match scores, group standings, stadium profiles, and historical ELO analytical data for the FIFA World Cup 2026.",
+        "url": "https://forix-navy.vercel.app/",
+        "applicationCategory": "SportsApplication",
+        "operatingSystem": "All",
+        "author": {
+          "@type": "Organization",
+          "name": "FORIX Sports Analytics"
+        },
+        "about": [
+          {
+            "@type": "SportsEvent",
+            "name": "FIFA World Cup 2026",
+            "sport": "Soccer",
+            "location": {
+              "@type": "Place",
+              "name": "North America (USA, Canada, Mexico)"
+            }
+          },
+          {
+            "@type": "Thing",
+            "name": "International Football Elo Rating System"
+          }
+        ]
+      }
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
@@ -38,40 +70,6 @@
 
     <!-- Favicon -->
     <link rel="icon" href="/favicon.ico" />
-
-    <!-- Canonical Link Tag -->
-    <link rel="canonical" href="https://forix-navy.vercel.app/" />
-
-    <!-- Geographic Meta Tags (GeoTags) for regional targeting -->
-    <meta name="geo.region" content="US;CA;MX" />
-    <meta name="geo.placename" content="North America" />
-    <meta name="geo.position" content="37.09024;-95.712891" />
-    <meta name="ICBM" content="37.09024, -95.712891" />
-
-    <!-- Schema.org JSON-LD Structured Data -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "SportsEvent",
-        "name": "FIFA World Cup 2026 AI Match Projections & Analytics",
-        "description": "Live AI-driven tactical analysis, win probabilities, and historical Elo data for every FIFA World Cup 2026 match.",
-        "startDate": "2026-06-11",
-        "endDate": "2026-07-19",
-        "eventStatus": "https://schema.org/EventScheduled",
-        "location": {
-          "@type": "Place",
-          "name": "United States, Canada, and Mexico",
-          "address": {
-            "@type": "PostalAddress",
-            "addressCountry": "North America"
-          }
-        },
-        "organizer": {
-          "@type": "SportsOrganization",
-          "name": "FIFA"
-        }
-      }
-    </script>
   </head>
   <body>
     <div id="root"></div>
