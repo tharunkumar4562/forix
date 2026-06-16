@@ -149,6 +149,75 @@ export default function App() {
     if (twDesc) twDesc.setAttribute("content", descMap[activeTab]);
   }, [activeTab]);
 
+  // Dynamically load real-world match result when selected teams change
+  useEffect(() => {
+    if (!teamASelected || !teamBSelected || liveGames.length === 0) return;
+
+    // Normalize selected names
+    const NAME_ALIASES: Record<string, string> = {
+      "united states": "USA",
+      "czech republic": "Czechia",
+      "democratic republic of the congo": "DR Congo",
+      "dr congo": "DR Congo",
+      "curaçao": "Curacao",
+      "türkiye": "Turkey",
+      "cabo verde": "Cape Verde",
+      "korea republic": "South Korea",
+      "ivory coast": "Ivory Coast",
+      "cote d'ivoire": "Ivory Coast",
+    };
+    const norm = (n: string) => NAME_ALIASES[n.toLowerCase()] || n;
+    const normA = norm(teamASelected);
+    const normB = norm(teamBSelected);
+
+    const realMatch = liveGames.find(g => 
+      (norm(g.home_team_name_en).toLowerCase() === normA.toLowerCase() && norm(g.away_team_name_en).toLowerCase() === normB.toLowerCase()) ||
+      (norm(g.home_team_name_en).toLowerCase() === normB.toLowerCase() && norm(g.away_team_name_en).toLowerCase() === normA.toLowerCase())
+    );
+
+    if (realMatch && realMatch.time_elapsed !== "notstarted") {
+      const isFinished = realMatch.finished === "TRUE";
+      const homeScore = parseInt(realMatch.home_score) || 0;
+      const awayScore = parseInt(realMatch.away_score) || 0;
+      const homeIsA = norm(realMatch.home_team_name_en).toLowerCase() === normA.toLowerCase();
+      const scoreA = homeIsA ? homeScore : awayScore;
+      const scoreB = homeIsA ? awayScore : homeScore;
+
+      const scorersA = homeIsA ? realMatch.home_scorers : realMatch.away_scorers;
+      const scorersB = homeIsA ? realMatch.away_scorers : realMatch.home_scorers;
+      const cleanScorersA = scorersA && scorersA !== "null" ? scorersA.replace(/[{}"]/g, "").replace(/,/g, ", ") : "";
+      const cleanScorersB = scorersB && scorersB !== "null" ? scorersB.replace(/[{}"]/g, "").replace(/,/g, ", ") : "";
+
+      let tA_prob = 0;
+      let tB_prob = 0;
+      let d_prob = 0;
+
+      if (isFinished) {
+        if (scoreA > scoreB) tA_prob = 100;
+        else if (scoreB > scoreA) tB_prob = 100;
+        else d_prob = 100;
+      } else {
+        if (scoreA > scoreB) { tA_prob = 75; d_prob = 15; tB_prob = 10; }
+        else if (scoreB > scoreA) { tB_prob = 75; d_prob = 15; tA_prob = 10; }
+        else { tA_prob = 35; d_prob = 30; tB_prob = 35; }
+      }
+
+      setPrediction({
+        teamA_win_prob: tA_prob,
+        teamB_win_prob: tB_prob,
+        draw_prob: d_prob,
+        predicted_score: `${scoreA} - ${scoreB}`,
+        analysis: isFinished 
+          ? `This match has concluded in the FIFA World Cup 2026. The match ended in a ${scoreA} - ${scoreB} ${scoreA === scoreB ? "draw" : scoreA > scoreB ? `${teamASelected} victory` : `${teamBSelected} victory`}. ${cleanScorersA ? `${teamASelected} scorers: ${cleanScorersA}.` : ""} ${cleanScorersB ? `${teamBSelected} scorers: ${cleanScorersB}.` : ""}`
+          : `This fixture is currently LIVE. The active score stands at ${scoreA} - ${scoreB} during the ${realMatch.time_elapsed}. ${cleanScorersA ? `${teamASelected} scorers: ${cleanScorersA}.` : ""} ${cleanScorersB ? `${teamBSelected} scorers: ${cleanScorersB}.` : ""}`,
+        key_battle: isFinished
+          ? `The 90-minute battle is complete. All match events and scorelines have been verified and locked into the official Group Standings database.`
+          : `Match in progress: The teams are making live adjustments. Monitor the Match Hub for live timeline events.`,
+        tactical_tip: isFinished ? "Real-time Factual Result (Full Time)" : "Real-time Factual Result (Live Match)"
+      });
+    }
+  }, [teamASelected, teamBSelected, liveGames]);
+
   const fetchTeams = async () => {
     try {
       setLoadingTeams(true);
@@ -1127,7 +1196,7 @@ export default function App() {
                     <div className="bg-hero-gradient text-white rounded-xl py-6 px-4 text-center relative overflow-hidden mb-4 shadow-md" id="prediction-hero-match">
                       <h2 className="sr-only">{teamASelected} vs {teamBSelected} AI Match Prediction</h2>
                       <div className="absolute top-2 right-3 text-[10px] font-bold tracking-wider bg-black/30 px-2.5 py-0.5 rounded-full uppercase text-white/90">
-                        AI Prediction Outcome
+                        {prediction.tactical_tip?.includes("Real-time") ? prediction.tactical_tip : "AI Prediction Outcome"}
                       </div>
                       
                       {/* Score display */}
@@ -1144,7 +1213,9 @@ export default function App() {
                           <span className="font-extrabold text-[#FFFFFF] text-sm tracking-wide uppercase truncate max-w-[100px]">{teamBSelected}</span>
                         </div>
                       </div>
-                      <p className="text-[10px] text-white/70 mt-4 font-semibold uppercase tracking-wider">Final Predicted Score (Full Match)</p>
+                      <p className="text-[10px] text-white/70 mt-4 font-semibold uppercase tracking-wider">
+                        {prediction.tactical_tip?.includes("Real-time") ? "Official Match Scoreline (Real Results)" : "Final Predicted Score (Full Match)"}
+                      </p>
                     </div>
 
                     {/* Probability Gauge Bar */}
