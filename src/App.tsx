@@ -166,13 +166,18 @@ export default function App() {
       "ivory coast": "Ivory Coast",
       "cote d'ivoire": "Ivory Coast",
     };
-    const norm = (n: string) => NAME_ALIASES[n.toLowerCase()] || n;
+    const norm = (n?: string) => {
+      if (!n) return "";
+      return NAME_ALIASES[n.toLowerCase()] || n;
+    };
     const normA = norm(teamASelected);
     const normB = norm(teamBSelected);
 
     const realMatch = liveGames.find(g => 
-      (norm(g.home_team_name_en).toLowerCase() === normA.toLowerCase() && norm(g.away_team_name_en).toLowerCase() === normB.toLowerCase()) ||
-      (norm(g.home_team_name_en).toLowerCase() === normB.toLowerCase() && norm(g.away_team_name_en).toLowerCase() === normA.toLowerCase())
+      g.home_team_name_en && g.away_team_name_en && (
+        (norm(g.home_team_name_en).toLowerCase() === normA.toLowerCase() && norm(g.away_team_name_en).toLowerCase() === normB.toLowerCase()) ||
+        (norm(g.home_team_name_en).toLowerCase() === normB.toLowerCase() && norm(g.away_team_name_en).toLowerCase() === normA.toLowerCase())
+      )
     );
 
     if (realMatch && realMatch.time_elapsed !== "notstarted") {
@@ -260,7 +265,6 @@ export default function App() {
         const stadMap: Record<string, LiveStadium> = {};
         stadData.forEach((s: LiveStadium) => { stadMap[s.id] = s; });
         const mapped: MatchFixture[] = games
-          .filter((g: LiveGame) => g.type === "group")
           .map((g: LiveGame) => {
             const stad = stadMap[g.stadium_id];
             const isFinished = g.finished === "TRUE";
@@ -268,8 +272,8 @@ export default function App() {
             return {
               id: g.id,
               group: g.group,
-              teamA: g.home_team_name_en,
-              teamB: g.away_team_name_en,
+              teamA: g.home_team_name_en || g.home_team_label || "TBD",
+              teamB: g.away_team_name_en || g.away_team_label || "TBD",
               date: g.local_date.split(" ")[0],
               time: g.local_date.split(" ")[1] || "",
               stadium: stad ? `${stad.name_en}, ${stad.city_en}` : "",
@@ -826,7 +830,7 @@ export default function App() {
                   ) : (() => {
                     // Helper to render a fixture card
                     const renderCard = (fixture: MatchFixture) => {
-                      const liveGame = liveGames.find(g => g.home_team_name_en === fixture.teamA && g.away_team_name_en === fixture.teamB);
+                      const liveGame = liveGames.find(g => g.id === fixture.id);
                       const liveTeamA = liveTeams.find(t => t.name_en === fixture.teamA);
                       const liveTeamB = liveTeams.find(t => t.name_en === fixture.teamB);
                       const tA = teams.find(t => t.team_name === fixture.teamA);
@@ -845,7 +849,7 @@ export default function App() {
                           id={`fixture-card-${fixture.id}`}
                         >
                           <div className="flex items-center justify-between text-[10px] font-semibold">
-                            <span className="font-bold bg-white border border-border-sleek px-1.5 py-0.5 rounded text-subtle">Group {fixture.group}</span>
+                            <span className="font-bold bg-white border border-border-sleek px-1.5 py-0.5 rounded text-subtle">{fixture.group.length === 1 ? `Group ${fixture.group}` : fixture.group}</span>
                             <div className="flex items-center gap-1.5">
                               {isLive && <span className="flex items-center gap-1 text-emerald-600 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>LIVE {liveGame?.time_elapsed}</span>}
                               {isFinished && <span className="bg-gray-700 text-white px-2 py-0.5 rounded font-bold text-[9px] tracking-widest">FULL TIME</span>}
@@ -890,14 +894,40 @@ export default function App() {
                       );
                     };
 
-                    const upcomingFixtures = fixtures.filter(f => {
-                      const g = liveGames.find(lg => lg.home_team_name_en === f.teamA && lg.away_team_name_en === f.teamB);
-                      return !g || g.finished !== "TRUE";
-                    });
-                    const finishedFixtures = fixtures.filter(f => {
-                      const g = liveGames.find(lg => lg.home_team_name_en === f.teamA && lg.away_team_name_en === f.teamB);
-                      return g && g.finished === "TRUE";
-                    });
+                    // Helper to parse fixture date and time into comparison timestamp
+                    const getFixtureTimestamp = (f: MatchFixture) => {
+                      const [m, d, y] = f.date.split("/").map(Number);
+                      const [hr, min] = f.time.split(":").map(Number);
+                      return new Date(y, m - 1, d, hr || 0, min || 0).getTime();
+                    };
+
+                     const upcomingFixtures = fixtures
+                       .filter(f => {
+                         const g = liveGames.find(lg => lg.id === f.id);
+                         return !g || g.finished !== "TRUE";
+                       })
+                       .sort((a, b) => {
+                         // 1. Prioritize active LIVE matches at the absolute top of the list
+                         const gA = liveGames.find(lg => lg.id === a.id);
+                         const gB = liveGames.find(lg => lg.id === b.id);
+                         const isLiveA = gA && gA.time_elapsed !== "notstarted" && gA.time_elapsed !== "finished" && gA.finished !== "TRUE";
+                         const isLiveB = gB && gB.time_elapsed !== "notstarted" && gB.time_elapsed !== "finished" && gB.finished !== "TRUE";
+                         if (isLiveA && !isLiveB) return -1;
+                         if (isLiveB && !isLiveA) return 1;
+ 
+                         // 2. Sort chronologically by date and time (nearest match first)
+                         return getFixtureTimestamp(a) - getFixtureTimestamp(b);
+                       });
+ 
+                     const finishedFixtures = fixtures
+                       .filter(f => {
+                         const g = liveGames.find(lg => lg.id === f.id);
+                         return g && g.finished === "TRUE";
+                       })
+                       .sort((a, b) => {
+                         // Sort reverse-chronologically for results (most recently concluded first)
+                         return getFixtureTimestamp(b) - getFixtureTimestamp(a);
+                       });
 
                     return (
                       <div className="space-y-5">
