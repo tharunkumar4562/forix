@@ -54,6 +54,30 @@ const FlagImage = ({ emoji, className = "" }: { emoji?: string, className?: stri
   return <img src={url} alt="flag" className={`inline-block object-cover shadow-[0_0_2px_rgba(0,0,0,0.2)] ${className}`} style={{ aspectRatio: '4/3' }} />;
 };
 
+function resolveKnockoutTeamName(teamName: string | undefined, label: string | undefined, gamesList: LiveGame[]): string {
+  if (teamName && teamName !== "undefined" && teamName !== "TBD") {
+    return teamName;
+  }
+  if (!label) return "TBD";
+
+  const matchMatch = label.match(/Winner Match\s+(\d+)/i);
+  if (matchMatch) {
+    const prevMatchId = parseInt(matchMatch[1]);
+    const prevGame = gamesList.find(g => g.id === String(prevMatchId));
+    if (prevGame) {
+      const h = prevGame.home_team_name_en;
+      const a = prevGame.away_team_name_en;
+      if (h && a && h !== "undefined" && a !== "undefined" && h !== "TBD" && a !== "TBD") {
+        return `${h} / ${a}`;
+      }
+      const hLabel = prevGame.home_team_label || `Match ${prevGame.id} Winner`;
+      const aLabel = prevGame.away_team_label || `Match ${prevGame.id} Winner`;
+      return `${hLabel} / ${aLabel}`;
+    }
+  }
+  return label;
+}
+
 export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<"hub" | "center" | "stands" | "insights">("hub");
@@ -149,79 +173,7 @@ export default function App() {
     if (twDesc) twDesc.setAttribute("content", descMap[activeTab]);
   }, [activeTab]);
 
-  // Dynamically load real-world match result when selected teams change
-  useEffect(() => {
-    if (!teamASelected || !teamBSelected || liveGames.length === 0) return;
 
-    // Normalize selected names
-    const NAME_ALIASES: Record<string, string> = {
-      "united states": "USA",
-      "czech republic": "Czechia",
-      "democratic republic of the congo": "DR Congo",
-      "dr congo": "DR Congo",
-      "curaçao": "Curacao",
-      "türkiye": "Turkey",
-      "cabo verde": "Cape Verde",
-      "korea republic": "South Korea",
-      "ivory coast": "Ivory Coast",
-      "cote d'ivoire": "Ivory Coast",
-    };
-    const norm = (n?: string) => {
-      if (!n) return "";
-      return NAME_ALIASES[n.toLowerCase()] || n;
-    };
-    const normA = norm(teamASelected);
-    const normB = norm(teamBSelected);
-
-    const realMatch = liveGames.find(g => 
-      g.home_team_name_en && g.away_team_name_en && (
-        (norm(g.home_team_name_en).toLowerCase() === normA.toLowerCase() && norm(g.away_team_name_en).toLowerCase() === normB.toLowerCase()) ||
-        (norm(g.home_team_name_en).toLowerCase() === normB.toLowerCase() && norm(g.away_team_name_en).toLowerCase() === normA.toLowerCase())
-      )
-    );
-
-    if (realMatch && realMatch.time_elapsed !== "notstarted") {
-      const isFinished = realMatch.finished === "TRUE";
-      const homeScore = parseInt(realMatch.home_score) || 0;
-      const awayScore = parseInt(realMatch.away_score) || 0;
-      const homeIsA = norm(realMatch.home_team_name_en).toLowerCase() === normA.toLowerCase();
-      const scoreA = homeIsA ? homeScore : awayScore;
-      const scoreB = homeIsA ? awayScore : homeScore;
-
-      const scorersA = homeIsA ? realMatch.home_scorers : realMatch.away_scorers;
-      const scorersB = homeIsA ? realMatch.away_scorers : realMatch.home_scorers;
-      const cleanScorersA = scorersA && scorersA !== "null" ? scorersA.replace(/[{}"]/g, "").replace(/,/g, ", ") : "";
-      const cleanScorersB = scorersB && scorersB !== "null" ? scorersB.replace(/[{}"]/g, "").replace(/,/g, ", ") : "";
-
-      let tA_prob = 0;
-      let tB_prob = 0;
-      let d_prob = 0;
-
-      if (isFinished) {
-        if (scoreA > scoreB) tA_prob = 100;
-        else if (scoreB > scoreA) tB_prob = 100;
-        else d_prob = 100;
-      } else {
-        if (scoreA > scoreB) { tA_prob = 75; d_prob = 15; tB_prob = 10; }
-        else if (scoreB > scoreA) { tB_prob = 75; d_prob = 15; tA_prob = 10; }
-        else { tA_prob = 35; d_prob = 30; tB_prob = 35; }
-      }
-
-      setPrediction({
-        teamA_win_prob: tA_prob,
-        teamB_win_prob: tB_prob,
-        draw_prob: d_prob,
-        predicted_score: `${scoreA} - ${scoreB}`,
-        analysis: isFinished 
-          ? `This match has concluded in the FIFA World Cup 2026. The match ended in a ${scoreA} - ${scoreB} ${scoreA === scoreB ? "draw" : scoreA > scoreB ? `${teamASelected} victory` : `${teamBSelected} victory`}. ${cleanScorersA ? `${teamASelected} scorers: ${cleanScorersA}.` : ""} ${cleanScorersB ? `${teamBSelected} scorers: ${cleanScorersB}.` : ""}`
-          : `This fixture is currently LIVE. The active score stands at ${scoreA} - ${scoreB} during the ${realMatch.time_elapsed}. ${cleanScorersA ? `${teamASelected} scorers: ${cleanScorersA}.` : ""} ${cleanScorersB ? `${teamBSelected} scorers: ${cleanScorersB}.` : ""}`,
-        key_battle: isFinished
-          ? `The 90-minute battle is complete. All match events and scorelines have been verified and locked into the official Group Standings database.`
-          : `Match in progress: The teams are making live adjustments. Monitor the Match Hub for live timeline events.`,
-        tactical_tip: isFinished ? "Real-time Factual Result (Full Time)" : "Real-time Factual Result (Live Match)"
-      });
-    }
-  }, [teamASelected, teamBSelected, liveGames]);
 
   const fetchTeams = async () => {
     try {
@@ -272,8 +224,8 @@ export default function App() {
             return {
               id: g.id,
               group: g.group,
-              teamA: g.home_team_name_en || g.home_team_label || "TBD",
-              teamB: g.away_team_name_en || g.away_team_label || "TBD",
+              teamA: resolveKnockoutTeamName(g.home_team_name_en, g.home_team_label, games),
+              teamB: resolveKnockoutTeamName(g.away_team_name_en, g.away_team_label, games),
               date: g.local_date.split(" ")[0],
               time: g.local_date.split(" ")[1] || "",
               stadium: stad ? `${stad.name_en}, ${stad.city_en}` : "",
@@ -336,6 +288,19 @@ export default function App() {
 
     const teamA = norm((overrideA && typeof overrideA === "string") ? overrideA : teamASelected);
     const teamB = norm((overrideB && typeof overrideB === "string") ? overrideB : teamBSelected);
+
+    const isTbdPlaceholder = (name: string): boolean => {
+      if (!name || name === "TBD" || name === "undefined") return true;
+      const lower = name.toLowerCase();
+      return lower.includes("winner") || lower.includes("runner-up") || lower.includes("match ") || lower.includes("group ") || lower.includes("/") || lower.includes("or");
+    };
+
+    if (isTbdPlaceholder(teamA) || isTbdPlaceholder(teamB)) {
+      alert("This knockout matchup is not yet determined. Please select two qualified teams from the dropdowns to run your custom prediction simulation.");
+      setPrediction(null);
+      setLoadingPrediction(false);
+      return;
+    }
 
     if (teamA === teamB) {
       alert("Please select two different national teams for prediction.");
