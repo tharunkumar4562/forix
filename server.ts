@@ -198,7 +198,7 @@ app.post("/api/prediction", async (req, res) => {
     let predictionResult;
 
     if (!ai) {
-      console.warn("FORIX AI Engine is not available. Falling back to rule-based prediction.");
+      console.warn("FORIX AI Engine is not available. Falling back to Poisson Regression and Monte Carlo simulation.");
     } else {
       try {
         // Call AI API with precise structured output format
@@ -235,53 +235,82 @@ app.post("/api/prediction", async (req, res) => {
     }
 
     if (!predictionResult || Object.keys(predictionResult).length === 0) {
-      // Rule-based fallback
-      const eloDiff = teamAData.elo_rating - teamBData.elo_rating;
-      const goalsDiff = (teamAData.avg_goals_scored - teamAData.avg_goals_conceded) - (teamBData.avg_goals_scored - teamBData.avg_goals_conceded);
-      
-      let baseA = 35 + (eloDiff / 15) + (goalsDiff * 10);
-      let baseB = 35 - (eloDiff / 15) - (goalsDiff * 10);
-      let draw = 30;
+      // Machine-learned Poisson + Monte Carlo simulation fallback
+      const eloA = teamAData.elo_rating;
+      const eloB = teamBData.elo_rating;
 
-      // Safeguard boundaries
-      if (baseA < 15) { baseA = 15; baseB = 55; }
-      if (baseB < 15) { baseB = 15; baseA = 55; }
-      
-      const total = baseA + baseB + draw;
-      const tA_prob = Math.round((baseA / total) * 100);
-      const tB_prob = Math.round((baseB / total) * 100);
-      const d_prob = 100 - tA_prob - tB_prob;
+      // log(xG) = 0.1790 + 0.1845 * (EloDiff / 100)
+      const intercept = 0.1790;
+      const eloCoef = 0.1845;
+      const xgA = Math.exp(intercept + eloCoef * (eloA - eloB) / 100);
+      const xgB = Math.exp(intercept + eloCoef * (eloB - eloA) / 100);
 
-      // Deterministic expected goals calculation based on team stats and ELO differential
-      const lambdaA = ((teamAData.avg_goals_scored + teamBData.avg_goals_conceded) / 2) + (eloDiff / 600);
-      const lambdaB = ((teamBData.avg_goals_scored + teamAData.avg_goals_conceded) / 2) - (eloDiff / 600);
-
-      let scoreA = Math.max(0, Math.round(lambdaA));
-      let scoreB = Math.max(0, Math.round(lambdaB));
-
-      // Align predicted scoreline with win probabilities
-      if (tA_prob > tB_prob + 5) {
-        if (scoreA <= scoreB) {
-          scoreA = scoreB + 1;
+      const poissonSample = (lam: number): number => {
+        if (lam <= 0) return 0;
+        const target = Math.exp(-lam);
+        let k = 0;
+        let p = 1.0;
+        while (true) {
+          k++;
+          p *= Math.random();
+          if (p <= target) break;
         }
-      } else if (tB_prob > tA_prob + 5) {
-        if (scoreB <= scoreA) {
-          scoreB = scoreA + 1;
-        }
-      } else {
-        // It's a draw or very close match
-        if (scoreA !== scoreB) {
-          const avg = Math.round((scoreA + scoreB) / 2);
-          scoreA = avg;
-          scoreB = avg;
+        return k - 1;
+      };
+
+      const trials = 10000;
+      let winA = 0;
+      let winB = 0;
+      let draw = 0;
+      const scoreFreq: Record<string, Record<string, number>> = { a: {}, draw: {}, b: {} };
+
+      for (let i = 0; i < trials; i++) {
+        const ga = poissonSample(xgA);
+        const gb = poissonSample(xgB);
+        const key = `${ga}-${gb}`;
+        if (ga > gb) {
+          winA++;
+          scoreFreq.a[key] = (scoreFreq.a[key] || 0) + 1;
+        } else if (ga < gb) {
+          winB++;
+          scoreFreq.b[key] = (scoreFreq.b[key] || 0) + 1;
+        } else {
+          draw++;
+          scoreFreq.draw[key] = (scoreFreq.draw[key] || 0) + 1;
         }
       }
+
+      // Most likely outcome
+      let outcome: 'a' | 'draw' | 'b' = 'draw';
+      let maxCount = draw;
+      if (winA > maxCount) {
+        outcome = 'a';
+        maxCount = winA;
+      }
+      if (winB > maxCount) {
+        outcome = 'b';
+        maxCount = winB;
+      }
+
+      const bucket = scoreFreq[outcome];
+      let predictedScore = "1 - 1";
+      let maxScoreCount = 0;
+      for (const key in bucket) {
+        if (bucket[key] > maxScoreCount) {
+          maxScoreCount = bucket[key];
+          predictedScore = key.replace("-", " - ");
+        }
+      }
+
+      const tA_prob = Math.round((winA / trials) * 100);
+      const tB_prob = Math.round((winB / trials) * 100);
+      const d_prob = 100 - tA_prob - tB_prob;
 
       predictionResult = {
         teamA_win_prob: tA_prob,
         teamB_win_prob: tB_prob,
         draw_prob: d_prob,
-        predicted_score: `${scoreA} - ${scoreB}`,
+        predicted_score: predictedScore,
         analysis: `${teamAData.team_name} and ${teamBData.team_name} look set for a spectacular clash. With ${teamAData.team_name}'s ELO of ${teamAData.elo_rating} and ${teamBData.team_name}'s ELO of ${teamBData.elo_rating}, the rating metrics support a highly tactical contest. ${teamAData.key_player} will be the key catalyst for the home team.`,
         key_battle: `Midfield struggle between the high-tempo transitional play of ${teamAData.team_name} and the structured block organization of ${teamBData.team_name}. Watch out for ${teamAData.key_player} versus the tactical lines of ${teamBData.key_player}.`,
         tactical_tip: `With ${teamAData.team_name} averaging ${teamAData.avg_goals_scored} goals and ${teamBData.team_name} conceding ${teamBData.avg_goals_conceded}, anticipating a highly defensive game pattern is strategically sound.`

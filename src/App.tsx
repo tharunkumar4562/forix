@@ -403,7 +403,10 @@ export default function App() {
       "ivory coast": "Ivory Coast",
       "cote d'ivoire": "Ivory Coast",
     };
-    const norm = (n: string) => NAME_ALIASES[n.toLowerCase()] || n;
+    const norm = (n?: string) => {
+      if (!n) return "";
+      return NAME_ALIASES[n.toLowerCase()] || n;
+    };
 
     const nameA = norm((forceA && typeof forceA === "string") ? forceA : teamASelected);
     const nameB = norm((forceB && typeof forceB === "string") ? forceB : teamBSelected);
@@ -411,51 +414,81 @@ export default function App() {
     const tB = teams.find(t => t.team_name.toLowerCase() === nameB.toLowerCase());
     if (!tA || !tB) return;
 
-    const eloDiff = tA.elo_rating - tB.elo_rating;
-    const goalsDiff = (tA.avg_goals_scored - tA.avg_goals_conceded) - (tB.avg_goals_scored - tB.avg_goals_conceded);
-    
-    let baseA = 35 + (eloDiff / 15) + (goalsDiff * 10);
-    let baseB = 35 - (eloDiff / 15) - (goalsDiff * 10);
-    let draw = 30;
+    const eloA = tA.elo_rating;
+    const eloB = tB.elo_rating;
 
-    if (baseA < 15) { baseA = 15; baseB = 55; }
-    if (baseB < 15) { baseB = 15; baseA = 55; }
-    
-    const total = baseA + baseB + draw;
-    const tA_prob = Math.round((baseA / total) * 100);
-    const tB_prob = Math.round((baseB / total) * 100);
-    const d_prob = 100 - tA_prob - tB_prob;
+    // log(xG) = 0.1790 + 0.1845 * (EloDiff / 100)
+    const intercept = 0.1790;
+    const eloCoef = 0.1845;
+    const xgA = Math.exp(intercept + eloCoef * (eloA - eloB) / 100);
+    const xgB = Math.exp(intercept + eloCoef * (eloB - eloA) / 100);
 
-    // Deterministic expected goals calculation based on team stats and ELO differential
-    const lambdaA = ((tA.avg_goals_scored + tB.avg_goals_conceded) / 2) + (eloDiff / 600);
-    const lambdaB = ((tB.avg_goals_scored + tA.avg_goals_conceded) / 2) - (eloDiff / 600);
-
-    let scoreA = Math.max(0, Math.round(lambdaA));
-    let scoreB = Math.max(0, Math.round(lambdaB));
-
-    // Align predicted scoreline with win probabilities
-    if (tA_prob > tB_prob + 5) {
-      if (scoreA <= scoreB) {
-        scoreA = scoreB + 1;
+    const poissonSample = (lam: number): number => {
+      if (lam <= 0) return 0;
+      const target = Math.exp(-lam);
+      let k = 0;
+      let p = 1.0;
+      while (true) {
+        k++;
+        p *= Math.random();
+        if (p <= target) break;
       }
-    } else if (tB_prob > tA_prob + 5) {
-      if (scoreB <= scoreA) {
-        scoreB = scoreA + 1;
-      }
-    } else {
-      // It's a draw or very close match
-      if (scoreA !== scoreB) {
-        const avg = Math.round((scoreA + scoreB) / 2);
-        scoreA = avg;
-        scoreB = avg;
+      return k - 1;
+    };
+
+    const trials = 10000;
+    let winA = 0;
+    let winB = 0;
+    let draw = 0;
+    const scoreFreq: Record<string, Record<string, number>> = { a: {}, draw: {}, b: {} };
+
+    for (let i = 0; i < trials; i++) {
+      const ga = poissonSample(xgA);
+      const gb = poissonSample(xgB);
+      const key = `${ga}-${gb}`;
+      if (ga > gb) {
+        winA++;
+        scoreFreq.a[key] = (scoreFreq.a[key] || 0) + 1;
+      } else if (ga < gb) {
+        winB++;
+        scoreFreq.b[key] = (scoreFreq.b[key] || 0) + 1;
+      } else {
+        draw++;
+        scoreFreq.draw[key] = (scoreFreq.draw[key] || 0) + 1;
       }
     }
+
+    // Most likely outcome
+    let outcome: 'a' | 'draw' | 'b' = 'draw';
+    let maxCount = draw;
+    if (winA > maxCount) {
+      outcome = 'a';
+      maxCount = winA;
+    }
+    if (winB > maxCount) {
+      outcome = 'b';
+      maxCount = winB;
+    }
+
+    const bucket = scoreFreq[outcome];
+    let predictedScore = "1 - 1";
+    let maxScoreCount = 0;
+    for (const key in bucket) {
+      if (bucket[key] > maxScoreCount) {
+        maxScoreCount = bucket[key];
+        predictedScore = key.replace("-", " - ");
+      }
+    }
+
+    const tA_prob = Math.round((winA / trials) * 100);
+    const tB_prob = Math.round((winB / trials) * 100);
+    const d_prob = 100 - tA_prob - tB_prob;
 
     setPrediction({
       teamA_win_prob: tA_prob,
       teamB_win_prob: tB_prob,
       draw_prob: d_prob,
-      predicted_score: `${scoreA} - ${scoreB}`,
+      predicted_score: predictedScore,
       analysis: `Computed technical breakdown between ${tA.team_name} and ${tB.team_name}. The high-altitude defensive records indicate a tactical match with heavy midfield struggle. ${tA.key_player} is expected to lead the offensive build-ups.`,
       key_battle: `Clash of styles: ${tA.team_name}'s attacking transition versus ${tB.team_name}'s standard low-block defense led by ${tB.key_player}.`,
       tactical_tip: `Under 2.5 goals is strongly backed based on the collective standard defensive lines (Simulated Fallback Insight).`
