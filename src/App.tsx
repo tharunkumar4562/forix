@@ -47,7 +47,7 @@ function getFlagEmojiOrText(emoji: string) {
   return emoji;
 }
 
-const FlagImage = ({ emoji, className = "" }: { emoji?: string, className?: string }) => {
+const FlagImage = ({ emoji, className = "" }: { emoji?: string, className?: string, key?: any }) => {
   if (!emoji) return <span className={className}>⚽</span>;
   const url = getFlagUrl(emoji);
   if (!url) return <span className={className}>{emoji}</span>;
@@ -829,14 +829,52 @@ export default function App() {
                     // Helper to render a fixture card
                     const renderCard = (fixture: MatchFixture) => {
                       const liveGame = liveGames.find(g => g.id === fixture.id);
-                      const liveTeamA = liveTeams.find(t => t.name_en === fixture.teamA);
-                      const liveTeamB = liveTeams.find(t => t.name_en === fixture.teamB);
-                      const tA = teams.find(t => t.team_name === fixture.teamA);
-                      const tB = teams.find(t => t.team_name === fixture.teamB);
                       const isFinished = liveGame?.finished === "TRUE";
                       const isLive = liveGame && liveGame.time_elapsed !== "notstarted" && liveGame.time_elapsed !== "finished" && !isFinished;
-                      const flagA = liveTeamA?.flag;
-                      const flagB = liveTeamB?.flag;
+
+                      const renderTeamFlagsAndName = (teamName: string, alignment: "left" | "right") => {
+                        const candidates = teamName.split(/\s*(?:\/|or)\s*/i).map(t => t.trim());
+                        const flagElements = candidates.map((c, index) => {
+                          if (c.toLowerCase().includes("winner") || c.toLowerCase().includes("match") || c.toLowerCase().includes("group") || c.toLowerCase().includes("runner-up")) {
+                            return <span key={`${c}-${index}`} className="w-[1.25em] h-[0.9em] text-center shrink-0">⚽</span>;
+                          }
+                          
+                          const NAME_ALIASES: Record<string, string> = {
+                            "usa": "United States",
+                            "czechia": "Czech Republic",
+                            "dr congo": "DR Congo",
+                            "curacao": "Curaçao",
+                            "turkey": "Turkey",
+                            "cape verde": "Cape Verde",
+                            "south korea": "South Korea",
+                            "ivory coast": "Ivory Coast",
+                          };
+                          const lookupName = NAME_ALIASES[c.toLowerCase()] || c;
+
+                          const liveT = liveTeams.find(t => t.name_en.toLowerCase() === lookupName.toLowerCase() || t.name_en.toLowerCase() === c.toLowerCase());
+                          const dbT = teams.find(t => t.team_name.toLowerCase() === lookupName.toLowerCase() || t.team_name.toLowerCase() === c.toLowerCase());
+                          const fUrl = liveT?.flag;
+                          const fEmoji = dbT?.flag_emoji;
+
+                          if (fUrl) {
+                            return <img key={`${c}-${index}`} src={fUrl} alt={c} className="h-3.5 shadow-sm rounded-[1.5px] shrink-0 object-cover" style={{ aspectRatio: '4/3', width: '17px' }} />;
+                          } else if (fEmoji) {
+                            return <FlagImage key={`${c}-${index}`} emoji={fEmoji} className="w-[1.25em] h-[0.9em] shrink-0" />;
+                          } else {
+                            return <span key={`${c}-${index}`} className="w-[1.25em] h-[0.9em] text-center shrink-0">⚽</span>;
+                          }
+                        });
+
+                        return (
+                          <div className={`flex items-center gap-1.5 ${alignment === "right" ? "flex-row-reverse" : "flex-row"} overflow-hidden max-w-[43%]`}>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              {flagElements}
+                            </div>
+                            <span className="text-[10.5px] font-bold text-brand-dark truncate">{teamName}</span>
+                          </div>
+                        );
+                      };
+
                       return (
                         <div
                           key={fixture.id}
@@ -855,22 +893,16 @@ export default function App() {
                               <span className="flex items-center gap-1 text-subtle"><Calendar className="w-3 h-3 text-accent" />{fixture.date}</span>
                             </div>
                           </div>
-                          <div className="flex items-center justify-around font-bold py-2 bg-white rounded border border-border-sleek text-brand-dark">
-                            <div className="flex items-center gap-1.5">
-                              {flagA ? <img src={flagA} alt={fixture.teamA} className="h-4 shadow-sm rounded-[2px]" /> : <FlagImage emoji={tA?.flag_emoji} className="w-[1.25em] h-[0.9em]" />}
-                              <span className="text-[11px]">{fixture.teamA}</span>
-                            </div>
+                          <div className="flex items-center justify-between font-bold py-2 bg-white rounded border border-border-sleek text-brand-dark px-2 gap-1">
+                            {renderTeamFlagsAndName(fixture.teamA, "left")}
                             {(isFinished || isLive) && fixture.score ? (
-                              <span className={`text-sm font-extrabold px-2 py-0.5 rounded ${
+                              <span className={`text-sm font-extrabold px-1.5 py-0.5 rounded shrink-0 ${
                                 isLive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"
                               }`}>{fixture.score}</span>
                             ) : (
-                              <span className="text-subtle text-[10px] font-bold">VS</span>
+                              <span className="text-subtle text-[9px] font-bold shrink-0">VS</span>
                             )}
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[11px]">{fixture.teamB}</span>
-                              {flagB ? <img src={flagB} alt={fixture.teamB} className="h-4 shadow-sm rounded-[2px]" /> : <FlagImage emoji={tB?.flag_emoji} className="w-[1.25em] h-[0.9em]" />}
-                            </div>
+                            {renderTeamFlagsAndName(fixture.teamB, "right")}
                           </div>
                           {isFinished && liveGame && liveGame.home_scorers && liveGame.home_scorers !== "null" && (
                             <div className="text-[10px] font-semibold px-1 flex justify-between">
