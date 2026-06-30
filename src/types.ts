@@ -42,6 +42,8 @@ export interface MatchFixture {
   stadium: string;
   played: boolean;
   score?: string;
+  flagsA?: string[];
+  flagsB?: string[];
 }
 
 // ---- Live API Types (worldcup26.ir) ----

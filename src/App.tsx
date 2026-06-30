@@ -78,6 +78,33 @@ function resolveKnockoutTeamName(teamName: string | undefined, label: string | u
   return label;
 }
 
+function gatherCandidateTeams(name: string, gamesList: LiveGame[]): string[] {
+  if (!name || name === "TBD" || name === "undefined") return [];
+  const parts = name.split(/\s+(?:\/|or|vs)\s+/i).map(t => t.trim());
+  let candidates: string[] = [];
+  for (const part of parts) {
+    const matchMatch = part.match(/Winner Match\s+(\d+)/i);
+    if (matchMatch) {
+      const prevMatchId = parseInt(matchMatch[1]);
+      const prevGame = gamesList.find(g => String(g.id) === String(prevMatchId));
+      if (prevGame) {
+        const h = prevGame.home_team_name_en;
+        const a = prevGame.away_team_name_en;
+        const hLabel = prevGame.home_team_label;
+        const aLabel = prevGame.away_team_label;
+        const homeCandidates = (h && h !== "undefined" && h !== "TBD") ? [h] : gatherCandidateTeams(hLabel || "", gamesList);
+        const awayCandidates = (a && a !== "undefined" && a !== "TBD") ? [a] : gatherCandidateTeams(aLabel || "", gamesList);
+        candidates = candidates.concat(homeCandidates).concat(awayCandidates);
+      } else {
+        candidates.push(part);
+      }
+    } else {
+      candidates.push(part);
+    }
+  }
+  return [...new Set(candidates)];
+}
+
 export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<"hub" | "center" | "stands" | "insights">("hub");
@@ -200,17 +227,58 @@ export default function App() {
   const fetchLiveData = async () => {
     try {
       setLoadingLive(true);
-      const [gamesRes, groupsRes, teamsRes, stadiumsRes] = await Promise.all([
+      const [gamesRes, groupsRes, teamsRes, stadiumsRes, dbTeamsRes] = await Promise.all([
         fetch("/api/live/games"),
         fetch("/api/live/groups"),
         fetch("/api/live/teams"),
         fetch("/api/live/stadiums"),
+        fetch("/api/teams"),
       ]);
 
       if (gamesRes.ok) {
         const gamesData = await gamesRes.json();
         const games: LiveGame[] = gamesData.games || [];
         setLiveGames(games);
+
+        const liveTeamsData = teamsRes.ok ? (await teamsRes.json()).teams || [] : [];
+        setLiveTeams(liveTeamsData);
+
+        const dbTeamsData = dbTeamsRes.ok ? await dbTeamsRes.json() : [];
+
+        const resolveFlags = (teamName: string) => {
+          const candidates = gatherCandidateTeams(teamName, games);
+          const concreteCandidates = candidates.filter(c => 
+            !c.toLowerCase().includes("winner") && 
+            !c.toLowerCase().includes("loser") && 
+            !c.toLowerCase().includes("match") && 
+            !c.toLowerCase().includes("group") && 
+            !c.toLowerCase().includes("runner-up")
+          );
+
+          if (concreteCandidates.length === 0) {
+            return [];
+          }
+
+          return concreteCandidates.map(c => {
+            const NAME_ALIASES: Record<string, string> = {
+              "usa": "United States",
+              "czechia": "Czech Republic",
+              "dr congo": "DR Congo",
+              "curacao": "Curaçao",
+              "turkey": "Turkey",
+              "cape verde": "Cape Verde",
+              "south korea": "South Korea",
+              "ivory coast": "Ivory Coast",
+            };
+            const lookupName = NAME_ALIASES[c.toLowerCase()] || c;
+
+            const liveT = liveTeamsData.find((t: any) => t.name_en.toLowerCase() === lookupName.toLowerCase() || t.name_en.toLowerCase() === c.toLowerCase());
+            const dbT = dbTeamsData.find((t: any) => t.team_name.toLowerCase() === lookupName.toLowerCase() || t.team_name.toLowerCase() === c.toLowerCase());
+            
+            return liveT?.flag || dbT?.flag_emoji || "⚽";
+          });
+        };
+
         // Convert live games → MatchFixture shape for fixture cards
         const stadData = stadiumsRes.ok ? (await stadiumsRes.json()).stadiums || [] : [];
         setLiveStadiums(stadData);
@@ -221,16 +289,20 @@ export default function App() {
             const stad = stadMap[g.stadium_id];
             const isFinished = g.finished === "TRUE";
             const isLive = g.time_elapsed !== "notstarted" && g.time_elapsed !== "finished" && !isFinished;
+            const resolvedTeamA = resolveKnockoutTeamName(g.home_team_name_en, g.home_team_label, games);
+            const resolvedTeamB = resolveKnockoutTeamName(g.away_team_name_en, g.away_team_label, games);
             return {
               id: g.id,
               group: g.group,
-              teamA: resolveKnockoutTeamName(g.home_team_name_en, g.home_team_label, games),
-              teamB: resolveKnockoutTeamName(g.away_team_name_en, g.away_team_label, games),
+              teamA: resolvedTeamA,
+              teamB: resolvedTeamB,
               date: g.local_date.split(" ")[0],
               time: g.local_date.split(" ")[1] || "",
               stadium: stad ? `${stad.name_en}, ${stad.city_en}` : "",
               played: isFinished,
               score: isFinished || isLive ? `${g.home_score} - ${g.away_score}` : undefined,
+              flagsA: resolveFlags(resolvedTeamA),
+              flagsB: resolveFlags(resolvedTeamB),
             };
           });
         setFixtures(mapped);
@@ -239,11 +311,6 @@ export default function App() {
       if (groupsRes.ok) {
         const groupsData = await groupsRes.json();
         setLiveGroups(groupsData.groups || []);
-      }
-
-      if (teamsRes.ok) {
-        const teamsData = await teamsRes.json();
-        setLiveTeams(teamsData.teams || []);
       }
 
       setLastUpdated(new Date());
@@ -832,47 +899,10 @@ export default function App() {
                       const isFinished = liveGame?.finished === "TRUE";
                       const isLive = liveGame && liveGame.time_elapsed !== "notstarted" && liveGame.time_elapsed !== "finished" && !isFinished;
 
-                      const gatherCandidateTeams = (name: string, gamesList: LiveGame[]): string[] => {
-                        if (!name || name === "TBD" || name === "undefined") return [];
-                        const parts = name.split(/\s+(?:\/|or|vs)\s+/i).map(t => t.trim());
-                        let candidates: string[] = [];
-                        for (const part of parts) {
-                          const matchMatch = part.match(/Winner Match\s+(\d+)/i);
-                          if (matchMatch) {
-                            const prevMatchId = parseInt(matchMatch[1]);
-                            const prevGame = gamesList.find(g => g.id === String(prevMatchId));
-                            if (prevGame) {
-                              const h = prevGame.home_team_name_en;
-                              const a = prevGame.away_team_name_en;
-                              const hLabel = prevGame.home_team_label;
-                              const aLabel = prevGame.away_team_label;
-                              const homeCandidates = (h && h !== "undefined" && h !== "TBD") ? [h] : gatherCandidateTeams(hLabel || "", gamesList);
-                              const awayCandidates = (a && a !== "undefined" && a !== "TBD") ? [a] : gatherCandidateTeams(aLabel || "", gamesList);
-                              candidates = candidates.concat(homeCandidates).concat(awayCandidates);
-                            } else {
-                              candidates.push(part);
-                            }
-                          } else {
-                            candidates.push(part);
-                          }
-                        }
-                        return [...new Set(candidates)];
-                      };
-
-                      const renderTeamFlagsAndName = (teamName: string, alignment: "left" | "right") => {
-                        const candidates = gatherCandidateTeams(teamName, liveGames);
-                        const hasConcreteCandidates = candidates.some(c => 
-                          !c.toLowerCase().includes("winner") && 
-                          !c.toLowerCase().includes("loser") && 
-                          !c.toLowerCase().includes("match") && 
-                          !c.toLowerCase().includes("group") && 
-                          !c.toLowerCase().includes("runner-up")
-                        );
-
-                        if (!hasConcreteCandidates) {
-                          const count = Math.min(2, Math.max(1, candidates.length));
+                      const renderTeamFlagsAndName = (teamName: string, alignment: "left" | "right", resolvedFlags: string[] = []) => {
+                        if (resolvedFlags.length === 0) {
                           const balls = [];
-                          for (let i = 0; i < count; i++) {
+                          for (let i = 0; i < 2; i++) {
                             balls.push(<span key={i} className="w-[1.25em] h-[0.9em] text-center shrink-0">⚽</span>);
                           }
                           return (
@@ -885,38 +915,13 @@ export default function App() {
                           );
                         }
 
-                        const concreteCandidates = candidates.filter(c => 
-                          !c.toLowerCase().includes("winner") && 
-                          !c.toLowerCase().includes("loser") && 
-                          !c.toLowerCase().includes("match") && 
-                          !c.toLowerCase().includes("group") && 
-                          !c.toLowerCase().includes("runner-up")
-                        );
-
-                        const flagElements = concreteCandidates.map((c, index) => {
-                          const NAME_ALIASES: Record<string, string> = {
-                            "usa": "United States",
-                            "czechia": "Czech Republic",
-                            "dr congo": "DR Congo",
-                            "curacao": "Curaçao",
-                            "turkey": "Turkey",
-                            "cape verde": "Cape Verde",
-                            "south korea": "South Korea",
-                            "ivory coast": "Ivory Coast",
-                          };
-                          const lookupName = NAME_ALIASES[c.toLowerCase()] || c;
-
-                          const liveT = liveTeams.find(t => t.name_en.toLowerCase() === lookupName.toLowerCase() || t.name_en.toLowerCase() === c.toLowerCase());
-                          const dbT = teams.find(t => t.team_name.toLowerCase() === lookupName.toLowerCase() || t.team_name.toLowerCase() === c.toLowerCase());
-                          const fUrl = liveT?.flag;
-                          const fEmoji = dbT?.flag_emoji;
-
-                          if (fUrl) {
-                            return <img key={`${c}-${index}`} src={fUrl} alt={c} className="h-3.5 shadow-sm rounded-[1.5px] shrink-0 object-cover" style={{ aspectRatio: '4/3', width: '17px' }} />;
-                          } else if (fEmoji) {
-                            return <FlagImage key={`${c}-${index}`} emoji={fEmoji} className="w-[1.25em] h-[0.9em] shrink-0" />;
+                        const flagElements = resolvedFlags.map((flag, index) => {
+                          if (flag.startsWith("http")) {
+                            return <img key={index} src={flag} alt="flag" className="h-3.5 shadow-sm rounded-[1.5px] shrink-0 object-cover" style={{ aspectRatio: '4/3', width: '17px' }} />;
+                          } else if (flag === "⚽") {
+                            return <span key={index} className="w-[1.25em] h-[0.9em] text-center shrink-0">⚽</span>;
                           } else {
-                            return <span key={`${c}-${index}`} className="w-[1.25em] h-[0.9em] text-center shrink-0">⚽</span>;
+                            return <FlagImage key={index} emoji={flag} className="w-[1.25em] h-[0.9em] shrink-0" />;
                           }
                         });
 
@@ -951,7 +956,7 @@ export default function App() {
                             </div>
                           </div>
                           <div className="flex items-center justify-between font-bold py-2 bg-white rounded border border-border-sleek text-brand-dark px-2 gap-1">
-                            {renderTeamFlagsAndName(fixture.teamA, "left")}
+                            {renderTeamFlagsAndName(fixture.teamA, "left", fixture.flagsA)}
                             {(isFinished || isLive) && fixture.score ? (
                               <span className={`text-sm font-extrabold px-1.5 py-0.5 rounded shrink-0 ${
                                 isLive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"
@@ -959,7 +964,7 @@ export default function App() {
                             ) : (
                               <span className="text-subtle text-[9px] font-bold shrink-0">VS</span>
                             )}
-                            {renderTeamFlagsAndName(fixture.teamB, "right")}
+                            {renderTeamFlagsAndName(fixture.teamB, "right", fixture.flagsB)}
                           </div>
                           {isFinished && liveGame && liveGame.home_scorers && liveGame.home_scorers !== "null" && (
                             <div className="text-[10px] font-semibold px-1 flex justify-between">
