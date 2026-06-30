@@ -832,13 +832,68 @@ export default function App() {
                       const isFinished = liveGame?.finished === "TRUE";
                       const isLive = liveGame && liveGame.time_elapsed !== "notstarted" && liveGame.time_elapsed !== "finished" && !isFinished;
 
-                      const renderTeamFlagsAndName = (teamName: string, alignment: "left" | "right") => {
-                        const candidates = teamName.split(/\s+\/\s+|\s+or\s+/i).map(t => t.trim());
-                        const flagElements = candidates.map((c, index) => {
-                          if (c.toLowerCase().includes("winner") || c.toLowerCase().includes("match") || c.toLowerCase().includes("group") || c.toLowerCase().includes("runner-up")) {
-                            return <span key={`${c}-${index}`} className="w-[1.25em] h-[0.9em] text-center shrink-0">⚽</span>;
+                      const gatherCandidateTeams = (name: string, gamesList: LiveGame[]): string[] => {
+                        if (!name || name === "TBD" || name === "undefined") return [];
+                        const parts = name.split(/\s+(?:\/|or|vs)\s+/i).map(t => t.trim());
+                        let candidates: string[] = [];
+                        for (const part of parts) {
+                          const matchMatch = part.match(/Winner Match\s+(\d+)/i);
+                          if (matchMatch) {
+                            const prevMatchId = parseInt(matchMatch[1]);
+                            const prevGame = gamesList.find(g => g.id === String(prevMatchId));
+                            if (prevGame) {
+                              const h = prevGame.home_team_name_en;
+                              const a = prevGame.away_team_name_en;
+                              const hLabel = prevGame.home_team_label;
+                              const aLabel = prevGame.away_team_label;
+                              const homeCandidates = (h && h !== "undefined" && h !== "TBD") ? [h] : gatherCandidateTeams(hLabel || "", gamesList);
+                              const awayCandidates = (a && a !== "undefined" && a !== "TBD") ? [a] : gatherCandidateTeams(aLabel || "", gamesList);
+                              candidates = candidates.concat(homeCandidates).concat(awayCandidates);
+                            } else {
+                              candidates.push(part);
+                            }
+                          } else {
+                            candidates.push(part);
                           }
-                          
+                        }
+                        return [...new Set(candidates)];
+                      };
+
+                      const renderTeamFlagsAndName = (teamName: string, alignment: "left" | "right") => {
+                        const candidates = gatherCandidateTeams(teamName, liveGames);
+                        const hasConcreteCandidates = candidates.some(c => 
+                          !c.toLowerCase().includes("winner") && 
+                          !c.toLowerCase().includes("loser") && 
+                          !c.toLowerCase().includes("match") && 
+                          !c.toLowerCase().includes("group") && 
+                          !c.toLowerCase().includes("runner-up")
+                        );
+
+                        if (!hasConcreteCandidates) {
+                          const count = Math.min(2, Math.max(1, candidates.length));
+                          const balls = [];
+                          for (let i = 0; i < count; i++) {
+                            balls.push(<span key={i} className="w-[1.25em] h-[0.9em] text-center shrink-0">⚽</span>);
+                          }
+                          return (
+                            <div className={`flex items-center gap-1.5 ${alignment === "right" ? "flex-row-reverse" : "flex-row"} overflow-hidden max-w-[43%]`}>
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                {balls}
+                              </div>
+                              <span className="text-[10.5px] font-bold text-brand-dark truncate">{teamName}</span>
+                            </div>
+                          );
+                        }
+
+                        const concreteCandidates = candidates.filter(c => 
+                          !c.toLowerCase().includes("winner") && 
+                          !c.toLowerCase().includes("loser") && 
+                          !c.toLowerCase().includes("match") && 
+                          !c.toLowerCase().includes("group") && 
+                          !c.toLowerCase().includes("runner-up")
+                        );
+
+                        const flagElements = concreteCandidates.map((c, index) => {
                           const NAME_ALIASES: Record<string, string> = {
                             "usa": "United States",
                             "czechia": "Czech Republic",
@@ -865,10 +920,12 @@ export default function App() {
                           }
                         });
 
+                        const flagsToRender = flagElements.slice(0, 4);
+
                         return (
                           <div className={`flex items-center gap-1.5 ${alignment === "right" ? "flex-row-reverse" : "flex-row"} overflow-hidden max-w-[43%]`}>
                             <div className="flex items-center gap-0.5 shrink-0">
-                              {flagElements}
+                              {flagsToRender}
                             </div>
                             <span className="text-[10.5px] font-bold text-brand-dark truncate">{teamName}</span>
                           </div>
