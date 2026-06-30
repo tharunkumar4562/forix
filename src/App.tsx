@@ -833,7 +833,7 @@ export default function App() {
                       const isLive = liveGame && liveGame.time_elapsed !== "notstarted" && liveGame.time_elapsed !== "finished" && !isFinished;
 
                       const renderTeamFlagsAndName = (teamName: string, alignment: "left" | "right") => {
-                        const candidates = teamName.split(/\s*(?:\/|or)\s*/i).map(t => t.trim());
+                        const candidates = teamName.split(/\s+\/\s+|\s+or\s+/i).map(t => t.trim());
                         const flagElements = candidates.map((c, index) => {
                           if (c.toLowerCase().includes("winner") || c.toLowerCase().includes("match") || c.toLowerCase().includes("group") || c.toLowerCase().includes("runner-up")) {
                             return <span key={`${c}-${index}`} className="w-[1.25em] h-[0.9em] text-center shrink-0">⚽</span>;
