@@ -359,7 +359,7 @@ export default function App() {
     const isTbdPlaceholder = (name: string): boolean => {
       if (!name || name === "TBD" || name === "undefined") return true;
       const lower = name.toLowerCase();
-      return lower.includes("winner") || lower.includes("runner-up") || lower.includes("match ") || lower.includes("group ") || lower.includes("/") || lower.includes("or");
+      return lower.includes("winner") || lower.includes("runner-up") || lower.includes("match ") || lower.includes("group ") || lower.includes("/") || lower.includes(" or ") || lower.includes(" vs ");
     };
 
     if (isTbdPlaceholder(teamA) || isTbdPlaceholder(teamB)) {
