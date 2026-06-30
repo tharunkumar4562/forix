@@ -993,10 +993,18 @@ export default function App() {
                       return new Date(y, m - 1, d, hr || 0, min || 0).getTime();
                     };
 
+                     const isUndecided = (name: string): boolean => {
+                       if (!name || name === "TBD" || name === "undefined") return true;
+                       const lower = name.toLowerCase();
+                       return lower.includes("winner") || lower.includes("loser") || lower.includes("match") || lower.includes("group") || lower.includes("runner-up") || lower.includes("/");
+                     };
+
                      const upcomingFixtures = fixtures
                        .filter(f => {
                          const g = liveGames.find(lg => lg.id === f.id);
-                         return !g || g.finished !== "TRUE";
+                         const isFinished = g && g.finished === "TRUE";
+                         if (isFinished) return false;
+                         return !isUndecided(f.teamA) && !isUndecided(f.teamB);
                        })
                        .sort((a, b) => {
                          // 1. Prioritize active LIVE matches at the absolute top of the list
