@@ -69,6 +69,7 @@
     border:1px solid var(--line);
     color:var(--text);
     transition:border-color .15s ease, transform .15s ease;
+    cursor:pointer;
   }
   .btn:hover{border-color:var(--accent); transform:translateY(-1px);}
   .btn.primary{background:var(--accent); color:#06110c; border-color:var(--accent); font-weight:600;}
@@ -127,6 +128,29 @@
   footer p{color:var(--muted); max-width:520px; margin-bottom:28px;}
   .foot-links{display:flex; gap:22px; flex-wrap:wrap; font-family:var(--mono); font-size:14px;}
 
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
   ::selection{background:var(--accent); color:#06110c;}
 </style>
 </head>
@@ -139,8 +163,8 @@
     <h1>Tharun Kumar<br><span>builds automation that survives contact with real use.</span></h1>
     <p class="lede">n8n automation and AI agent developer. I focus on the part most demos skip — what happens when an API fails, a model goes down, or a step breaks quietly at 3am.</p>
     <div class="hero-links">
-      <a class="btn primary" href="mailto:tharunkumarmalepati3@gmail.com">Email me</a>
-      <a class="btn" href="https://www.linkedin.com/in/malepati-tharun-kumar" target="_blank">LinkedIn</a>
+      <a class="btn primary" href="mailto:tharunkumarmalepati3@gmail.com" onclick="copyEmail(event)" title="tharunkumarmalepati3@gmail.com">Email me</a>
+      <a class="btn" href="https://www.linkedin.com/in/malepati-tharun-kumar/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
     </div>
   </header>
 
@@ -230,11 +254,36 @@
     <h2>Want something built like this?</h2>
     <p>Automation, AI agents, or a system that needs to actually hold up in production — happy to walk through what that'd look like.</p>
     <div class="foot-links">
-      <a href="mailto:tharunkumarmalepati3@gmail.com">tharunkumarmalepati3@gmail.com</a>
-      <a href="https://www.linkedin.com/in/malepati-tharun-kumar" target="_blank">LinkedIn →</a>
+      <a href="mailto:tharunkumarmalepati3@gmail.com" onclick="copyEmail(event)" title="tharunkumarmalepati3@gmail.com">tharunkumarmalepati3@gmail.com</a>
+      <a href="https://www.linkedin.com/in/malepati-tharun-kumar/" target="_blank" rel="noopener noreferrer">LinkedIn →</a>
     </div>
   </footer>
 
 </div>
+
+<div id="toast" class="toast">Copied tharunkumarmalepati3@gmail.com to clipboard!</div>
+
+<script>
+  function copyEmail(e) {
+    var email = 'tharunkumarmalepati3@gmail.com';
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(email).then(function() {
+        showToast();
+      }).catch(function() {
+        showToast();
+      });
+    } else {
+      showToast();
+    }
+  }
+  function showToast() {
+    var toast = document.getElementById('toast');
+    if (toast) {
+      toast.classList.add('show');
+      setTimeout(function() { toast.classList.remove('show'); }, 3500);
+    }
+  }
+</script>
+
 </body>
 </html>
