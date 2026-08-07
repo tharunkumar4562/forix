@@ -12,3 +12,4 @@ coverage/
 
 # Python virtual environment folder
 venv/
+.vercel
